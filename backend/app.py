@@ -31,6 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from event_ingestion import EventDatabase, EventOrchestrator
 from impact_engine import ImpactEngine
 from value_chains import ALL_CHAINS, find_chains_for_event, get_chain_tickers
+from stock_universe import StockUniverse, load_sec_with_sic
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("thetaflow.api")
@@ -44,6 +45,7 @@ DB_PATH = os.getenv("THETAFLOW_DB", os.path.join(os.path.expanduser("~"), "theta
 db = EventDatabase(DB_PATH)
 orchestrator = EventOrchestrator(db)
 engine = ImpactEngine(DB_PATH)
+universe = StockUniverse(DB_PATH)
 
 last_collection_at = None
 
@@ -252,6 +254,35 @@ def get_ticker_info(ticker):
         "chain_count": len(chains_containing),
         "price_history": history,
     })
+
+@app.route("/api/universe/search", methods=["GET"])
+def search_universe():
+    """Search all publicly listed stocks."""
+    query = request.args.get("q", "")
+    chain_id = request.args.get("chain_id")
+    limit = request.args.get("limit", 20, type=int)
+    results = universe.search_tickers(query, chain_id, limit)
+    return jsonify({"success": True, "results": results, "count": len(results)})
+
+@app.route("/api/universe/stats", methods=["GET"])
+def universe_stats():
+    """Get stock universe coverage stats."""
+    stats = universe.get_universe_stats()
+    return jsonify({"success": True, **stats})
+
+@app.route("/api/universe/chain/<chain_id>", methods=["GET"])
+def universe_chain_companies(chain_id):
+    """Get all companies in the universe mapped to a chain."""
+    layer = request.args.get("layer")
+    limit = request.args.get("limit", 50, type=int)
+    companies = universe.get_chain_companies(chain_id, layer, limit)
+    return jsonify({"success": True, "companies": companies, "count": len(companies)})
+
+@app.route("/api/universe/load", methods=["POST"])
+def load_universe():
+    """Load/refresh the stock universe from SEC EDGAR."""
+    count = universe.load_from_sec()
+    return jsonify({"success": True, "companies_loaded": count})
 
 @app.route("/api/collect", methods=["POST"])
 def trigger_collection():
