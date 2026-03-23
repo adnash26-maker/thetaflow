@@ -4,64 +4,86 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ThetaFlow — Investment Intelligence</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
-        :root { --bg:#0a0e17; --surface:#111827; --surface2:#1a2234; --border:#1f2937; --text:#e5e7eb; --muted:#9ca3af; --accent:#6366f1; --green:#10b981; --red:#ef4444; --yellow:#f59e0b; --purple:#8b5cf6; }
+        :root { --bg:#0a0e17; --surface:#111827; --surface2:#1a2234; --border:#1f2937; --text:#e5e7eb; --muted:#9ca3af; --accent:#6366f1; --green:#10b981; --red:#ef4444; --yellow:#f59e0b; --purple:#8b5cf6; --cyan:#06b6d4; }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
-        .nav { display:flex; align-items:center; justify-content:space-between; padding:14px 28px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
-        .nav-logo { font-size:20px; font-weight:800; background:linear-gradient(135deg,#6366f1,#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-        .nav-actions { display:flex; gap:8px; align-items:center; }
-        .btn { padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:13px; transition:all 0.2s; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; height:100vh; display:flex; flex-direction:column; }
+
+        /* Nav */
+        .nav { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+        .nav-logo { font-size:20px; font-weight:800; background:linear-gradient(135deg,var(--accent),var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .nav-actions { display:flex; gap:8px; }
+        .btn { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:13px; transition:all 0.2s; }
         .btn:hover { border-color:var(--accent); }
-        .btn.primary { background:var(--accent); border-color:var(--accent); color:white; }
-        .container { max-width:1400px; margin:0 auto; padding:20px 28px; }
-        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-        .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
-        .panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; }
-        .panel-title { font-weight:700; font-size:15px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
-        .badge { font-size:11px; padding:3px 8px; border-radius:6px; font-weight:600; }
-        .badge-green { background:#10b98120; color:#10b981; }
-        .badge-red { background:#ef444420; color:#ef4444; }
-        .badge-purple { background:#8b5cf620; color:#8b5cf6; }
-        .chain-card { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:16px; cursor:pointer; transition:all 0.2s; }
-        .chain-card:hover { border-color:var(--accent); transform:translateY(-2px); }
-        .chain-card h3 { font-size:16px; margin-bottom:6px; }
-        .chain-card p { font-size:13px; color:var(--muted); }
-        .chain-stats { display:flex; gap:16px; margin-top:10px; font-size:12px; color:var(--muted); }
-        .chain-stats span { display:flex; align-items:center; gap:4px; }
-        .event-item { padding:12px 0; border-bottom:1px solid var(--border); }
-        .event-item:last-child { border:none; }
-        .event-title { font-size:14px; font-weight:500; margin-bottom:4px; }
-        .event-meta { font-size:12px; color:var(--muted); display:flex; gap:12px; }
-        .event-chains { display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; }
-        .chain-tag { font-size:11px; padding:2px 8px; border-radius:4px; background:var(--surface2); border:1px solid var(--border); }
-        .ticker-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:14px; }
-        .ticker-row:last-child { border:none; }
-        .ticker-symbol { font-weight:700; color:var(--accent); min-width:60px; }
-        .ticker-company { flex:1; margin:0 12px; }
-        .ticker-layer { font-size:12px; color:var(--muted); }
-        .ticker-price { text-align:right; font-weight:600; }
-        .ticker-change { text-align:right; font-size:13px; min-width:70px; }
+
+        /* Chat Layout */
+        .chat-container { flex:1; overflow-y:auto; padding:20px 0; }
+        .chat-inner { max-width:800px; margin:0 auto; padding:0 20px; }
+
+        /* Messages */
+        .msg { margin-bottom:20px; animation:fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .msg-system { }
+        .msg-user { display:flex; justify-content:flex-end; }
+        .msg-user .msg-bubble { background:var(--accent); border-radius:16px 16px 4px 16px; max-width:70%; padding:12px 16px; }
+        .msg-ai { }
+        .msg-ai .msg-bubble { background:var(--surface); border:1px solid var(--border); border-radius:4px 16px 16px 16px; padding:16px 20px; }
+        .msg-label { font-size:11px; color:var(--muted); margin-bottom:4px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+
+        /* Signal Card (system message) */
+        .signal-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; }
+        .signal-headline { font-size:15px; font-weight:600; margin-bottom:8px; }
+        .signal-meta { font-size:12px; color:var(--muted); margin-bottom:10px; }
+        .signal-chains { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+        .chain-tag { font-size:11px; padding:3px 10px; border-radius:6px; font-weight:600; border:1px solid; }
+        .signal-picks { display:flex; gap:8px; flex-wrap:wrap; }
+        .pick-chip { display:inline-flex; align-items:center; gap:6px; background:var(--surface2); padding:6px 12px; border-radius:8px; font-size:13px; }
+        .pick-ticker { font-weight:700; color:var(--accent); }
+        .pick-price { font-weight:600; }
+        .pick-conviction { font-size:11px; color:var(--muted); }
+
+        /* Chain Expansion */
+        .chain-expand { background:var(--surface2); border-radius:10px; margin-top:12px; overflow:hidden; }
+        .chain-layer { padding:12px 16px; border-bottom:1px solid var(--border); }
+        .chain-layer:last-child { border:none; }
+        .layer-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+        .layer-name { font-weight:700; font-size:13px; }
+        .layer-sensitivity { font-size:11px; color:var(--muted); }
+        .layer-desc { font-size:12px; color:var(--muted); margin-bottom:8px; }
+        .layer-tickers { display:flex; flex-wrap:wrap; gap:6px; }
+        .ticker-chip { background:var(--bg); padding:6px 10px; border-radius:6px; font-size:12px; display:flex; align-items:center; gap:8px; }
+        .ticker-chip .sym { font-weight:700; color:var(--accent); }
+        .ticker-chip .price { font-weight:600; }
+        .ticker-chip .chg { font-size:11px; }
         .positive { color:var(--green); }
         .negative { color:var(--red); }
-        .analyze-input { width:100%; padding:14px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:15px; outline:none; }
-        .analyze-input:focus { border-color:var(--accent); }
-        .analyze-input::placeholder { color:#4b5563; }
-        .analyze-btn { margin-top:10px; width:100%; padding:12px; }
-        .analysis-result { margin-top:16px; }
-        .rec-card { background:var(--surface2); border-radius:8px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
-        .conviction-bar { height:4px; border-radius:2px; background:var(--border); margin-top:4px; }
-        .conviction-fill { height:100%; border-radius:2px; background:var(--accent); }
-        .summary-box { background:var(--surface2); border-left:3px solid var(--accent); border-radius:0 8px 8px 0; padding:14px 16px; margin-top:12px; font-size:14px; line-height:1.6; }
-        .loading { text-align:center; padding:40px; color:var(--muted); }
-        .spinner { width:24px; height:24px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 12px; }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        /* Modal */
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; }
-        .modal-overlay.show { display:flex; }
-        .modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; width:90%; max-width:500px; max-height:85vh; overflow-y:auto; padding:32px; position:relative; }
-        .modal-close { position:absolute; top:12px; right:16px; background:none; border:none; color:var(--muted); font-size:24px; cursor:pointer; }
+
+        /* Suggestion Pills */
+        .suggestions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+        .suggestion { padding:10px 16px; border-radius:20px; border:1px solid var(--border); background:var(--surface); cursor:pointer; font-size:13px; transition:all 0.2s; }
+        .suggestion:hover { border-color:var(--accent); background:var(--accent)10; transform:translateY(-1px); }
+        .suggestion-icon { margin-right:4px; }
+
+        /* Input Bar */
+        .input-bar { padding:12px 20px; background:var(--surface); border-top:1px solid var(--border); flex-shrink:0; }
+        .input-inner { max-width:800px; margin:0 auto; display:flex; gap:8px; }
+        .chat-input { flex:1; padding:12px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:15px; outline:none; }
+        .chat-input:focus { border-color:var(--accent); }
+        .chat-input::placeholder { color:#4b5563; }
+        .send-btn { padding:12px 20px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:14px; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
+        .send-btn:hover { opacity:0.9; }
+        .send-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+        /* Typing indicator */
+        .typing { display:flex; gap:4px; padding:8px 0; }
+        .typing span { width:6px; height:6px; background:var(--muted); border-radius:50%; animation:bounce 1.4s infinite; }
+        .typing span:nth-child(2) { animation-delay:0.2s; }
+        .typing span:nth-child(3) { animation-delay:0.4s; }
+        @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-8px)} }
+
+        /* Summary */
+        .summary-text { font-size:14px; line-height:1.7; margin-bottom:12px; }
+        .disclaimer { font-size:11px; color:#4b5563; font-style:italic; margin-top:12px; }
     </style>
 </head>
 <body>
@@ -69,69 +91,45 @@
 <nav class="nav">
     <div class="nav-logo">ThetaFlow</div>
     <div class="nav-actions">
-        <button class="btn" onclick="loadData()">Refresh</button>
         <button class="btn" onclick="exportCSV()">Export CSV</button>
         <button class="btn" id="authBtn" onclick="showAuth()">Sign In</button>
     </div>
 </nav>
 
-<div class="container">
-    <!-- TODAY'S SIGNALS: Auto-analyzed events — the primary experience -->
-    <div class="panel" style="margin-bottom:16px;">
-        <div class="panel-title">⚡ Today's Signals <span class="badge badge-green" id="signalCount">Loading...</span></div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Breaking events automatically analyzed for investment impact across all value chains.</p>
-        <div id="signalsContainer">
-            <div class="loading"><div class="spinner"></div>Analyzing latest events...</div>
-        </div>
-    </div>
-
-    <!-- Portfolio + Chains side by side -->
-    <div class="grid-2" style="margin-bottom:16px;">
-        <!-- Portfolio View -->
-        <div class="panel">
-            <div class="panel-title">📊 Top Picks Across All Chains <span class="badge badge-purple" id="tickerCount">0</span></div>
-            <div id="portfolioContainer" style="max-height:500px;overflow-y:auto;">
-                <div class="loading"><div class="spinner"></div>Loading...</div>
+<div class="chat-container" id="chatContainer">
+    <div class="chat-inner" id="chatInner">
+        <!-- Welcome message -->
+        <div class="msg msg-ai">
+            <div class="msg-label">ThetaFlow</div>
+            <div class="msg-bubble">
+                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Welcome to ThetaFlow ⚡</div>
+                <p style="color:var(--muted);margin-bottom:16px;">I analyze breaking events and map their investment impact across entire value chains — from raw materials to end applications.</p>
+                <p style="margin-bottom:16px;">Ask me about any market event, or pick a suggestion below:</p>
+                <div class="suggestions" id="suggestions"></div>
             </div>
         </div>
 
-        <!-- Value Chains -->
-        <div class="panel">
-            <div class="panel-title">⛓️ Value Chains</div>
-            <div id="chainsGrid" style="display:flex;flex-direction:column;gap:10px;">
-                <div class="loading"><div class="spinner"></div>Loading...</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Custom Analyzer (secondary) -->
-    <div class="panel" style="margin-bottom:16px;">
-        <div class="panel-title">🔍 Analyze Any Event <span class="badge badge-purple">Custom</span></div>
-        <div style="display:flex;gap:8px;">
-            <input type="text" class="analyze-input" id="analyzeInput" placeholder="Paste any headline — e.g. TSMC announces $100B investment in US chip fabs" onkeydown="if(event.key==='Enter')analyzeEvent()" style="flex:1;">
-            <button class="btn primary" onclick="analyzeEvent()" style="white-space:nowrap;padding:14px 24px;">Analyze</button>
-        </div>
-        <div id="analysisResult"></div>
+        <!-- Auto-loaded signals will appear here -->
+        <div id="signalsArea"></div>
     </div>
 </div>
 
-<!-- Chain Detail Modal -->
-<div class="modal-overlay" id="chainModal">
-    <div class="modal" style="max-width:700px">
-        <button class="modal-close" onclick="document.getElementById('chainModal').classList.remove('show')">&times;</button>
-        <div id="chainDetail"></div>
+<div class="input-bar">
+    <div class="input-inner">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Ask about any market event, company, or macro trend..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}">
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">Analyze →</button>
     </div>
 </div>
 
 <!-- Auth Modal -->
-<div class="modal-overlay" id="authModal">
-    <div class="modal" style="max-width:400px">
-        <button class="modal-close" onclick="document.getElementById('authModal').classList.remove('show')">&times;</button>
+<div style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;" id="authModal">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:90%;max-width:400px;padding:32px;position:relative;">
+        <button onclick="document.getElementById('authModal').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;">&times;</button>
         <h3 id="authTitle" style="margin-bottom:16px;text-align:center;">Sign In</h3>
         <div id="authError" style="display:none;color:var(--red);font-size:13px;margin-bottom:12px;text-align:center;"></div>
         <input type="email" id="authEmail" placeholder="Email" style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);margin-bottom:12px;outline:none;font-size:14px;">
         <input type="password" id="authPassword" placeholder="Password" style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);margin-bottom:16px;outline:none;font-size:14px;">
-        <button class="btn primary" style="width:100%;padding:12px;margin-bottom:12px;" onclick="submitAuth()">Sign In</button>
+        <button class="send-btn" style="width:100%;padding:12px;margin-bottom:12px;" onclick="submitAuth()">Sign In</button>
         <p style="text-align:center;font-size:13px;color:var(--muted);" id="authToggleText">
             Don't have an account? <a href="#" onclick="toggleAuth()" style="color:var(--accent);">Register</a>
         </p>
@@ -143,201 +141,209 @@ const API = window.location.origin + '/api';
 let authMode = 'login';
 let currentUser = null;
 
-async function loadData() {
-    loadSignals();
-    loadChains();
-    loadPortfolio();
-    checkAuth();
+// ── Suggestions ──
+
+const SUGGESTIONS = [
+    { icon: '🤖', text: 'What if NVIDIA beats earnings by 20%?' },
+    { icon: '⚛️', text: 'Impact of new nuclear plant for data centers' },
+    { icon: '💊', text: 'Eli Lilly GLP-1 drug gets FDA fast-track approval' },
+    { icon: '🔒', text: 'Major ransomware attack hits US healthcare system' },
+    { icon: '⚡', text: 'Biden signs $50B clean energy infrastructure bill' },
+    { icon: '🏭', text: 'TSMC announces $100B investment in US chip fabs' },
+];
+
+function renderSuggestions() {
+    const el = document.getElementById('suggestions');
+    el.innerHTML = SUGGESTIONS.map(s =>
+        `<div class="suggestion" onclick="submitSuggestion('${s.text.replace(/'/g, "\\'")}')">
+            <span class="suggestion-icon">${s.icon}</span> ${s.text}
+        </div>`
+    ).join('');
+}
+
+function submitSuggestion(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+}
+
+// ── Chat Messages ──
+
+function addUserMessage(text) {
+    const html = `<div class="msg msg-user"><div class="msg-bubble">${text}</div></div>`;
+    document.getElementById('signalsArea').insertAdjacentHTML('beforeend', html);
+    scrollToBottom();
+}
+
+function addTypingIndicator() {
+    const html = `<div class="msg msg-ai" id="typingMsg"><div class="msg-label">ThetaFlow</div><div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div></div>`;
+    document.getElementById('signalsArea').insertAdjacentHTML('beforeend', html);
+    scrollToBottom();
+}
+
+function removeTypingIndicator() {
+    const el = document.getElementById('typingMsg');
+    if (el) el.remove();
+}
+
+function addAnalysisMessage(data) {
+    let html = '<div class="msg msg-ai"><div class="msg-label">ThetaFlow</div><div class="msg-bubble">';
+
+    // Summary
+    if (data.summary) {
+        html += `<div class="summary-text">${data.summary}</div>`;
+    }
+
+    // Chain tags
+    if (data.chains && data.chains.length) {
+        html += '<div class="signal-chains">';
+        data.chains.forEach(c => {
+            html += `<span class="chain-tag" style="border-color:${c.theme_color};color:${c.theme_color};">${c.chain_name} ${(c.relevance_score*100).toFixed(0)}%</span>`;
+        });
+        html += '</div>';
+    }
+
+    // Top picks as chips
+    if (data.top_picks && data.top_picks.length) {
+        html += '<div style="margin-top:12px;margin-bottom:4px;font-size:12px;color:var(--muted);font-weight:600;">TOP PICKS</div>';
+        html += '<div class="signal-picks">';
+        data.top_picks.forEach(t => {
+            const dir = t.direction === 'bullish' ? '🟢' : '🔴';
+            const priceStr = t.current_price ? `$${t.current_price.toFixed(2)}` : '';
+            const chgClass = (t.change_pct || 0) >= 0 ? 'positive' : 'negative';
+            const chgStr = t.current_price ? `${t.change_pct >= 0 ? '+' : ''}${t.change_pct.toFixed(1)}%` : '';
+            html += `<div class="pick-chip">
+                ${dir} <span class="pick-ticker">${t.ticker}</span>
+                <span class="pick-price">${priceStr}</span>
+                <span class="${chgClass}">${chgStr}</span>
+                <span class="pick-conviction">${(t.conviction*100).toFixed(0)}%</span>
+            </div>`;
+        });
+        html += '</div>';
+    }
+
+    // Full chain expansion for all recommendations
+    if (data.recommendations && data.recommendations.length) {
+        // Group by chain → layer
+        const byChain = {};
+        data.recommendations.forEach(r => {
+            if (!byChain[r.chain_name]) byChain[r.chain_name] = {};
+            if (!byChain[r.chain_name][r.layer]) byChain[r.chain_name][r.layer] = [];
+            byChain[r.chain_name][r.layer].push(r);
+        });
+
+        for (const [chainName, layers] of Object.entries(byChain)) {
+            html += `<div class="chain-expand" style="margin-top:12px;">`;
+            html += `<div style="padding:10px 16px;font-weight:700;font-size:13px;border-bottom:1px solid var(--border);color:var(--purple);">⛓️ ${chainName} — Full Value Chain</div>`;
+
+            for (const [layerName, tickers] of Object.entries(layers)) {
+                html += `<div class="chain-layer">`;
+                html += `<div class="layer-name">${layerName}</div>`;
+                html += `<div class="layer-tickers">`;
+                tickers.forEach(t => {
+                    const dir = t.direction === 'bullish' ? '🟢' : '🔴';
+                    const priceStr = t.current_price ? `$${t.current_price.toFixed(2)}` : '';
+                    const chgClass = (t.change_pct || 0) >= 0 ? 'positive' : 'negative';
+                    const chgStr = t.current_price ? `(${t.change_pct >= 0 ? '+' : ''}${t.change_pct.toFixed(1)}%)` : '';
+                    html += `<div class="ticker-chip">
+                        ${dir} <span class="sym">${t.ticker}</span>
+                        <span class="price">${priceStr}</span>
+                        <span class="chg ${chgClass}">${chgStr}</span>
+                    </div>`;
+                });
+                html += '</div></div>';
+            }
+            html += '</div>';
+        }
+    }
+
+    html += '<div class="disclaimer">Not financial advice. For informational purposes only.</div>';
+    html += '</div></div>';
+
+    document.getElementById('signalsArea').insertAdjacentHTML('beforeend', html);
+    scrollToBottom();
+}
+
+function addSignalCards(signals) {
+    if (!signals.length) return;
+
+    let html = '<div class="msg msg-ai"><div class="msg-label">ThetaFlow · Latest Signals</div><div class="msg-bubble">';
+    html += `<div style="font-weight:700;margin-bottom:12px;">📡 ${signals.length} events matched to value chains in the last 72 hours:</div>`;
+
+    signals.forEach(s => {
+        const severity = s.severity === 'high' ? '🔴' : '🟡';
+        const chains = (s.chains || []).map(c =>
+            `<span class="chain-tag" style="border-color:${c.theme_color || 'var(--border)'};color:${c.theme_color || 'var(--muted)'};">${c.chain_name}</span>`
+        ).join(' ');
+        const picks = (s.top_picks || []).map(t => {
+            const dir = t.direction === 'bullish' ? '🟢' : '🔴';
+            return `<div class="pick-chip">${dir} <span class="pick-ticker">${t.ticker}</span> <span class="pick-conviction">${(t.conviction*100).toFixed(0)}%</span></div>`;
+        }).join('');
+
+        html += `<div class="signal-card">
+            <div class="signal-headline">${severity} ${s.title}</div>
+            <div class="signal-meta">${s.source} · ${getTimeAgo(s.timestamp)}</div>
+            <div class="signal-chains">${chains}</div>
+            <div class="signal-picks">${picks}</div>
+        </div>`;
+    });
+
+    html += '</div></div>';
+    document.getElementById('signalsArea').insertAdjacentHTML('beforeend', html);
+    scrollToBottom();
+}
+
+// ── Core Actions ──
+
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    addUserMessage(text);
+    addTypingIndicator();
+
+    document.getElementById('sendBtn').disabled = true;
+
+    try {
+        const resp = await fetch(`${API}/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ headline: text })
+        });
+        const data = await resp.json();
+        removeTypingIndicator();
+
+        if (data.success && data.chains_matched > 0) {
+            addAnalysisMessage(data);
+        } else {
+            addAnalysisMessage({
+                summary: "I couldn't map this event to any tracked value chains. Try mentioning specific companies, sectors, or technologies like AI, semiconductors, cybersecurity, clean energy, or GLP-1 drugs.",
+                chains: [], top_picks: [], recommendations: []
+            });
+        }
+    } catch(e) {
+        removeTypingIndicator();
+        addAnalysisMessage({ summary: "Failed to analyze. Please try again.", chains: [], top_picks: [], recommendations: [] });
+    }
+
+    document.getElementById('sendBtn').disabled = false;
 }
 
 async function loadSignals() {
     try {
-        const resp = await fetch(`${API}/signals?hours=72&limit=8`);
+        const resp = await fetch(`${API}/signals?hours=72&limit=5`);
         const data = await resp.json();
-        if (!data.success) return;
-        document.getElementById('signalCount').textContent = `${data.count} signals`;
-        const container = document.getElementById('signalsContainer');
-        if (!data.signals.length) {
-            container.innerHTML = '<p style="color:var(--muted);padding:20px;text-align:center;">No chain-matched events yet. Click Refresh to collect latest news.</p>';
-            return;
+        if (data.success && data.signals.length) {
+            addSignalCards(data.signals);
         }
-        container.innerHTML = data.signals.map(s => {
-            const severity = s.severity === 'high' ? '🔴' : s.severity === 'critical' ? '🔴🔴' : '🟡';
-            const chains = (s.chains || []).map(c =>
-                `<span class="chain-tag" style="border-color:${c.theme_color || 'var(--border)'}">${c.chain_name} ${(c.relevance_score*100).toFixed(0)}%</span>`
-            ).join(' ');
-            const picks = (s.top_picks || []).map(t => {
-                const dirIcon = t.direction === 'bullish' ? '🟢' : '🔴';
-                const priceStr = t.current_price ? `$${t.current_price.toFixed(0)}` : '';
-                return `<div style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);padding:4px 10px;border-radius:6px;font-size:12px;margin-right:6px;margin-top:4px;">
-                    ${dirIcon} <strong style="color:var(--accent);">${t.ticker}</strong> ${priceStr}
-                    <span style="color:var(--muted);">${(t.conviction*100).toFixed(0)}%</span>
-                </div>`;
-            }).join('');
-            const timeAgo = getTimeAgo(s.timestamp);
-            return `<div style="padding:14px 0;border-bottom:1px solid var(--border);">
-                <div style="font-size:15px;font-weight:600;margin-bottom:6px;">${severity} ${s.title}</div>
-                <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${s.source} · ${timeAgo}</div>
-                <div style="margin-bottom:6px;">${chains}</div>
-                <div>${picks}</div>
-                ${s.summary ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;font-style:italic;">${s.summary}</div>` : ''}
-            </div>`;
-        }).join('');
-    } catch(e) { console.error('Failed to load signals:', e); }
+    } catch(e) {}
 }
 
-async function loadChains() {
-    try {
-        const resp = await fetch(`${API}/chains`);
-        const data = await resp.json();
-        if (!data.success) return;
-        const grid = document.getElementById('chainsGrid');
-        grid.innerHTML = data.chains.map(c => `
-            <div class="chain-card" onclick="showChain('${c.id}')" style="border-left:3px solid ${c.theme_color}">
-                <h3 style="font-size:15px;">${c.name}</h3>
-                <p style="font-size:12px;">${c.description.substring(0, 80)}...</p>
-                <div class="chain-stats">
-                    <span>📊 ${c.node_count} layers</span>
-                    <span>🏷️ ${c.ticker_count} tickers</span>
-                </div>
-            </div>
-        `).join('');
-    } catch(e) { console.error(e); }
+function scrollToBottom() {
+    const container = document.getElementById('chatContainer');
+    setTimeout(() => container.scrollTop = container.scrollHeight, 50);
 }
-
-async function loadEvents() {
-    try {
-        const resp = await fetch(`${API}/events?hours=72&limit=20`);
-        const data = await resp.json();
-        if (!data.success) return;
-        document.getElementById('eventCount').textContent = data.count;
-        const container = document.getElementById('eventsContainer');
-        if (!data.events.length) { container.innerHTML = '<p style="color:var(--muted);padding:20px;">No events yet. Click Refresh to collect.</p>'; return; }
-        container.innerHTML = data.events.map(e => {
-            const chains = (e.matched_chains || []).map(c =>
-                `<span class="chain-tag" style="border-color:${c.theme_color || 'var(--border)'}">${c.chain_name}</span>`
-            ).join('');
-            const severity = e.severity === 'high' ? '🔴' : e.severity === 'critical' ? '🔴🔴' : '🟡';
-            const timeAgo = getTimeAgo(e.timestamp);
-            return `<div class="event-item">
-                <div class="event-title">${severity} ${e.title}</div>
-                <div class="event-meta"><span>${e.source}</span><span>${timeAgo}</span></div>
-                ${chains ? `<div class="event-chains">${chains}</div>` : ''}
-            </div>`;
-        }).join('');
-    } catch(e) { console.error(e); }
-}
-
-async function loadPortfolio() {
-    try {
-        const resp = await fetch(`${API}/portfolio`);
-        const data = await resp.json();
-        if (!data.success) return;
-        document.getElementById('tickerCount').textContent = `${data.total_tickers} tickers`;
-        const container = document.getElementById('portfolioContainer');
-        container.innerHTML = data.tickers.slice(0, 25).map(t => {
-            const changeClass = t.change_pct >= 0 ? 'positive' : 'negative';
-            const changeStr = t.current_price ? `${t.change_pct >= 0 ? '+' : ''}${t.change_pct.toFixed(1)}%` : '—';
-            const priceStr = t.current_price ? `$${t.current_price.toFixed(2)}` : '—';
-            const dirIcon = t.direction === 'bullish' ? '🟢' : '🔴';
-            return `<div class="ticker-row">
-                <span class="ticker-symbol">${dirIcon} ${t.ticker}</span>
-                <div class="ticker-company">
-                    <div>${t.company}</div>
-                    <div class="ticker-layer">${t.chain_name} → ${t.layer}</div>
-                </div>
-                <span class="ticker-price">${priceStr}</span>
-                <span class="ticker-change ${changeClass}">${changeStr}</span>
-            </div>`;
-        }).join('');
-    } catch(e) { console.error(e); }
-}
-
-async function showChain(chainId) {
-    try {
-        const resp = await fetch(`${API}/chains/${chainId}`);
-        const data = await resp.json();
-        if (!data.success) return;
-
-        let html = `<h2 style="margin-bottom:8px;">${data.chain_name}</h2>
-            <p style="color:var(--muted);margin-bottom:20px;font-size:14px;">${data.description}</p>`;
-
-        data.nodes.forEach(node => {
-            html += `<div style="margin-bottom:16px;">
-                <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:${data.theme_color};">
-                    Layer ${node.position}: ${node.layer}
-                    <span style="font-weight:400;color:var(--muted);font-size:12px;"> — sensitivity: ${(node.sensitivity*100).toFixed(0)}%</span>
-                </div>
-                <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">${node.description}</div>`;
-            node.tickers.forEach(t => {
-                const changeClass = (t.change_pct || 0) >= 0 ? 'positive' : 'negative';
-                const priceStr = t.current_price ? `$${t.current_price.toFixed(2)}` : '';
-                const changeStr = t.current_price ? ` (${t.change_pct >= 0 ? '+' : ''}${t.change_pct.toFixed(1)}%)` : '';
-                html += `<div class="rec-card">
-                    <div>
-                        <span style="font-weight:700;color:var(--accent);">${t.ticker}</span> ${t.company}
-                        <div style="font-size:12px;color:var(--muted);margin-top:2px;">${t.thesis}</div>
-                        <div class="conviction-bar" style="width:120px;margin-top:6px;"><div class="conviction-fill" style="width:${t.conviction*100}%;"></div></div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-weight:600;">${priceStr}</div>
-                        <div class="${changeClass}" style="font-size:13px;">${changeStr}</div>
-                    </div>
-                </div>`;
-            });
-            html += '</div>';
-        });
-
-        document.getElementById('chainDetail').innerHTML = html;
-        document.getElementById('chainModal').classList.add('show');
-    } catch(e) { console.error(e); }
-}
-
-async function analyzeEvent() {
-    const headline = document.getElementById('analyzeInput').value.trim();
-    if (!headline) return;
-
-    const resultDiv = document.getElementById('analysisResult');
-    resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Analyzing impact...</div>';
-
-    try {
-        const resp = await fetch(`${API}/analyze`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ headline })
-        });
-        const data = await resp.json();
-        if (!data.success) { resultDiv.innerHTML = `<p style="color:var(--red);">${data.error}</p>`; return; }
-
-        let html = `<div class="summary-box">${data.summary}</div>`;
-
-        if (data.top_picks && data.top_picks.length) {
-            html += '<div style="margin-top:16px;">';
-            data.top_picks.forEach(t => {
-                const dirIcon = t.direction === 'bullish' ? '🟢' : '🔴';
-                const priceStr = t.current_price ? `$${t.current_price.toFixed(2)}` : '';
-                html += `<div class="rec-card">
-                    <div>
-                        <span style="font-weight:700;color:var(--accent);">${dirIcon} ${t.ticker}</span> ${t.company}
-                        <div style="font-size:12px;color:var(--muted);">${t.chain_name} → ${t.layer} | ${t.time_horizon.replace('_',' ')} | ${(t.conviction*100).toFixed(0)}% conviction</div>
-                    </div>
-                    <div style="text-align:right;font-weight:600;">${priceStr}</div>
-                </div>`;
-            });
-            html += '</div>';
-        }
-
-        if (data.chains && data.chains.length) {
-            html += '<div style="margin-top:12px;font-size:13px;color:var(--muted);">Chains impacted: ';
-            html += data.chains.map(c => `<span class="chain-tag" style="border-color:${c.theme_color}">${c.chain_name} (${(c.relevance_score*100).toFixed(0)}%)</span>`).join(' ');
-            html += '</div>';
-        }
-
-        html += '<div style="margin-top:12px;font-size:11px;color:#4b5563;font-style:italic;">Not financial advice. For informational purposes only.</div>';
-        resultDiv.innerHTML = html;
-    } catch(e) { resultDiv.innerHTML = '<p style="color:var(--red);">Analysis failed.</p>'; }
-}
-
-function exportCSV() { window.location.href = `${API}/export`; }
 
 function getTimeAgo(ts) {
     const diff = (Date.now() - new Date(ts).getTime()) / 1000;
@@ -346,7 +352,9 @@ function getTimeAgo(ts) {
     return `${Math.floor(diff/86400)}d ago`;
 }
 
-// Auth
+function exportCSV() { window.location.href = `${API}/export`; }
+
+// ── Auth ──
 async function checkAuth() {
     try {
         const resp = await fetch(`${API}/auth/me`, {credentials:'same-origin'});
@@ -369,7 +377,7 @@ function showAuth() {
     }
     authMode = 'login';
     document.getElementById('authTitle').textContent = 'Sign In';
-    document.getElementById('authModal').classList.add('show');
+    document.getElementById('authModal').style.display = 'flex';
 }
 
 function toggleAuth() {
@@ -393,7 +401,7 @@ async function submitAuth() {
         if (data.success || data.user) {
             currentUser = data.user;
             document.getElementById('authBtn').textContent = data.user.email.split('@')[0];
-            document.getElementById('authModal').classList.remove('show');
+            document.getElementById('authModal').style.display = 'none';
         } else {
             document.getElementById('authError').textContent = data.error;
             document.getElementById('authError').style.display = 'block';
@@ -401,8 +409,11 @@ async function submitAuth() {
     } catch(e) {}
 }
 
-// Init
-loadData();
+// ── Init ──
+renderSuggestions();
+loadSignals();
+checkAuth();
+document.getElementById('chatInput').focus();
 </script>
 </body>
 </html>
