@@ -102,6 +102,8 @@ def _find_html(filename):
     """Find and read an HTML file - tries every possible path."""
     candidates = [
         os.getenv("THETAFLOW_FRONTEND", ""),
+        os.path.dirname(os.path.abspath(__file__)),
+        os.getcwd(),
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend"),
         os.path.join(os.getcwd(), "frontend"),
     ]

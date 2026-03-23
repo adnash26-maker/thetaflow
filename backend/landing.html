@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThetaFlow — Investment Intelligence Across the Value Chain</title>
+    <meta name="description" content="ThetaFlow maps breaking events to investment opportunities across entire value chains. From AI data centers to nuclear energy to chip manufacturing — see how news flows through markets before it's priced in.">
+    <meta property="og:title" content="ThetaFlow — Investment Intelligence Across the Value Chain">
+    <meta property="og:description" content="Map breaking events to investment opportunities across entire supply chains. AI-powered analysis from raw materials to end applications.">
+    <style>
+        :root { --bg:#0a0e17; --surface:#111827; --text:#f3f4f6; --muted:#9ca3af; --accent:#6366f1; --accent2:#06b6d4; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+        .container { max-width:1000px; margin:0 auto; padding:0 24px; }
+        .hero { text-align:center; padding:100px 24px 80px; }
+        .hero-badge { display:inline-block; padding:6px 16px; border-radius:20px; border:1px solid #1f2937; background:#111827; font-size:13px; color:var(--accent); margin-bottom:24px; }
+        h1 { font-size:clamp(36px,5vw,56px); font-weight:800; line-height:1.1; margin-bottom:20px; }
+        h1 .gradient { background:linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .hero p { font-size:18px; color:var(--muted); max-width:650px; margin:0 auto 32px; }
+        .cta-group { display:flex; gap:12px; justify-content:center; }
+        .cta { padding:14px 32px; border-radius:10px; font-size:16px; font-weight:600; text-decoration:none; cursor:pointer; border:none; }
+        .cta-primary { background:linear-gradient(135deg,var(--accent),#8b5cf6); color:white; }
+        .cta-secondary { background:transparent; border:1px solid #374151; color:var(--text); }
+        .features { padding:80px 0; }
+        .feature-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:24px; }
+        .feature { background:var(--surface); border:1px solid #1f2937; border-radius:12px; padding:28px; }
+        .feature h3 { font-size:18px; margin-bottom:8px; }
+        .feature p { color:var(--muted); font-size:14px; }
+        .chains-section { padding:60px 0; text-align:center; }
+        .chains-section h2 { font-size:32px; margin-bottom:32px; }
+        .chain-pills { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+        .chain-pill { padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; border:1px solid; }
+        footer { text-align:center; padding:40px; color:var(--muted); font-size:13px; border-top:1px solid #1f2937; }
+    </style>
+</head>
+<body>
+<div class="hero">
+    <div class="hero-badge">⚡ Real-Time Investment Intelligence</div>
+    <h1>Map Events to <span class="gradient">Investment Opportunities</span> Across the Value Chain</h1>
+    <p>ThetaFlow analyzes breaking news, SEC filings, and macro data to show you which tickers benefit — from raw materials to end applications — before the market prices it in.</p>
+    <div class="cta-group">
+        <a href="/dashboard" class="cta cta-primary">Try the Dashboard</a>
+        <a href="#features" class="cta cta-secondary">How It Works</a>
+    </div>
+</div>
+
+<div class="container" id="features">
+    <div class="features">
+        <div class="feature-grid">
+            <div class="feature">
+                <h3>⛓️ Value Chain Mapping</h3>
+                <p>Pre-built investment chains for AI Infrastructure, Clean Energy, GLP-1/Biotech, and Cybersecurity. Each chain maps from upstream suppliers to downstream applications with specific tickers at every layer.</p>
+            </div>
+            <div class="feature">
+                <h3>📰 Real-Time Event Analysis</h3>
+                <p>Paste any headline and instantly see which value chains are impacted, which tickers have the highest exposure, and the estimated time horizon for each position.</p>
+            </div>
+            <div class="feature">
+                <h3>📊 Impact Propagation</h3>
+                <p>Events don't just affect one company. ThetaFlow models how catalysts ripple through the supply chain — from TSMC to NVIDIA to Microsoft to Salesforce.</p>
+            </div>
+            <div class="feature">
+                <h3>💹 Live Market Data</h3>
+                <p>Real-time stock prices, daily changes, and conviction scores for every ticker in every chain. Export to CSV for your own analysis.</p>
+            </div>
+            <div class="feature">
+                <h3>🔔 Catalyst Alerts</h3>
+                <p>Get notified when breaking events match your tracked value chains. Know within minutes when a catalyst hits — not hours.</p>
+            </div>
+            <div class="feature">
+                <h3>🏛️ Multi-Source Intelligence</h3>
+                <p>Ingests from NewsAPI, SEC EDGAR filings, Federal Reserve economic data, and Yahoo Finance. No single-source blind spots.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="chains-section">
+    <div class="container">
+        <h2>Pre-Built Value Chains</h2>
+        <div class="chain-pills">
+            <span class="chain-pill" style="border-color:#8b5cf6;color:#8b5cf6;">🤖 AI Infrastructure</span>
+            <span class="chain-pill" style="border-color:#10b981;color:#10b981;">⚡ Clean Energy</span>
+            <span class="chain-pill" style="border-color:#ec4899;color:#ec4899;">💊 GLP-1 & Obesity</span>
+            <span class="chain-pill" style="border-color:#f59e0b;color:#f59e0b;">🔒 Cybersecurity</span>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 ThetaFlow. Not financial advice.</p>
+</footer>
+</body>
+</html>
