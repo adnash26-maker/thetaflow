@@ -98,26 +98,33 @@ def auth_required(tier_minimum=None):
 
 # ── Pages ──
 
-def _get_frontend_dir():
-    """Resolve frontend directory - works both locally and on Railway."""
+def _find_html(filename):
+    """Find and read an HTML file - tries every possible path."""
     candidates = [
-        os.getenv("THETAFLOW_FRONTEND"),
+        os.getenv("THETAFLOW_FRONTEND", ""),
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend"),
         os.path.join(os.getcwd(), "frontend"),
-        "/app/frontend",
     ]
     for d in candidates:
-        if d and os.path.isdir(d):
-            return d
-    return app.static_folder
+        path = os.path.join(d, filename) if d else ""
+        if path and os.path.isfile(path):
+            with open(path, "r") as f:
+                return f.read()
+    return None
 
 @app.route("/")
 def serve_landing():
-    return send_from_directory(_get_frontend_dir(), "landing.html")
+    html = _find_html("landing.html")
+    if html:
+        return Response(html, mimetype="text/html")
+    return "Landing page not found", 404
 
 @app.route("/dashboard")
 def serve_dashboard():
-    return send_from_directory(_get_frontend_dir(), "dashboard.html")
+    html = _find_html("dashboard.html")
+    if html:
+        return Response(html, mimetype="text/html")
+    return "Dashboard not found", 404
 
 # ── Core API ──
 
