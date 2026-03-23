@@ -98,13 +98,26 @@ def auth_required(tier_minimum=None):
 
 # ── Pages ──
 
+def _get_frontend_dir():
+    """Resolve frontend directory - works both locally and on Railway."""
+    candidates = [
+        os.getenv("THETAFLOW_FRONTEND"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend"),
+        os.path.join(os.getcwd(), "frontend"),
+        "/app/frontend",
+    ]
+    for d in candidates:
+        if d and os.path.isdir(d):
+            return d
+    return app.static_folder
+
 @app.route("/")
 def serve_landing():
-    return send_from_directory(app.static_folder, "landing.html")
+    return send_from_directory(_get_frontend_dir(), "landing.html")
 
 @app.route("/dashboard")
 def serve_dashboard():
-    return send_from_directory(app.static_folder, "dashboard.html")
+    return send_from_directory(_get_frontend_dir(), "dashboard.html")
 
 # ── Core API ──
 
