@@ -128,6 +128,24 @@ def serve_dashboard():
 
 # ── Core API ──
 
+@app.route("/api/debug-paths")
+def debug_paths():
+    """Temporary debug route to find frontend directory on Railway."""
+    import glob
+    cwd = os.getcwd()
+    app_file = os.path.abspath(__file__)
+    candidates = {
+        "cwd": cwd,
+        "app_file": app_file,
+        "env_frontend": os.getenv("THETAFLOW_FRONTEND", "not set"),
+        "cwd_contents": os.listdir(cwd) if os.path.isdir(cwd) else "not a dir",
+    }
+    # Search for dashboard.html
+    for root_dir in [cwd, os.path.dirname(app_file), "/app", "/opt"]:
+        for f in glob.glob(os.path.join(root_dir, "**", "dashboard.html"), recursive=True):
+            candidates[f"found_{f}"] = True
+    return jsonify(candidates)
+
 @app.route("/api/health")
 def health():
     return jsonify({
