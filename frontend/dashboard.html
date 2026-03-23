@@ -5,442 +5,337 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ThetaFlow — Investment Intelligence</title>
     <style>
-        :root { --bg:#0a0e17; --surface:#111827; --surface2:#1a2234; --border:#1f2937; --text:#e5e7eb; --muted:#9ca3af; --accent:#6366f1; --green:#10b981; --red:#ef4444; --yellow:#f59e0b; --purple:#8b5cf6; --cyan:#06b6d4; }
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; height:100vh; display:flex; flex-direction:column; }
+        :root{--bg:#0a0e17;--s1:#111827;--s2:#1a2234;--s3:#232d42;--bd:#1f2937;--tx:#e5e7eb;--mt:#9ca3af;--ac:#6366f1;--gn:#10b981;--rd:#ef4444;--yl:#f59e0b;--pu:#8b5cf6;--cy:#06b6d4}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);line-height:1.5;height:100vh;display:flex;flex-direction:column}
+        .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--s1);border-bottom:1px solid var(--bd);flex-shrink:0}
+        .logo{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--ac),var(--cy));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .nav-r{display:flex;gap:8px}
+        .btn{padding:7px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:13px;transition:all .2s}
+        .btn:hover{border-color:var(--ac)}
 
-        /* Nav */
-        .nav { display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
-        .nav-logo { font-size:20px; font-weight:800; background:linear-gradient(135deg,var(--accent),var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-        .nav-actions { display:flex; gap:8px; }
-        .btn { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:13px; transition:all 0.2s; }
-        .btn:hover { border-color:var(--accent); }
+        /* Chat */
+        .chat{flex:1;overflow-y:auto;padding:20px 0}
+        .chat-w{max-width:820px;margin:0 auto;padding:0 20px}
+        .msg{margin-bottom:24px;animation:fi .3s ease}
+        @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .msg-u{display:flex;justify-content:flex-end}
+        .msg-u .bub{background:var(--ac);border-radius:16px 16px 4px 16px;max-width:70%;padding:12px 16px;font-size:15px}
+        .msg-a .lbl{font-size:11px;color:var(--mt);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+        .msg-a .bub{background:var(--s1);border:1px solid var(--bd);border-radius:4px 16px 16px 16px;padding:20px;overflow:hidden}
 
-        /* Chat Layout */
-        .chat-container { flex:1; overflow-y:auto; padding:20px 0; }
-        .chat-inner { max-width:800px; margin:0 auto; padding:0 20px; }
+        /* Verdict Banner */
+        .verdict{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:10px;margin-bottom:16px;font-weight:700;font-size:15px}
+        .verdict.bull{background:linear-gradient(135deg,#10b98115,#10b98108);border:1px solid #10b98130}
+        .verdict.bear{background:linear-gradient(135deg,#ef444415,#ef444408);border:1px solid #ef444430}
+        .verdict-bar{flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden}
+        .verdict-fill{height:100%;border-radius:3px;transition:width .5s ease}
 
-        /* Messages */
-        .msg { margin-bottom:20px; animation:fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        .msg-system { }
-        .msg-user { display:flex; justify-content:flex-end; }
-        .msg-user .msg-bubble { background:var(--accent); border-radius:16px 16px 4px 16px; max-width:70%; padding:12px 16px; }
-        .msg-ai { }
-        .msg-ai .msg-bubble { background:var(--surface); border:1px solid var(--border); border-radius:4px 16px 16px 16px; padding:16px 20px; }
-        .msg-label { font-size:11px; color:var(--muted); margin-bottom:4px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+        /* Chain Flow */
+        .chain-flow{display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+        .chain-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid}
+        .flow-arrow{color:var(--mt);font-size:18px}
 
-        /* Signal Card (system message) */
-        .signal-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; }
-        .signal-headline { font-size:15px; font-weight:600; margin-bottom:8px; }
-        .signal-meta { font-size:12px; color:var(--muted); margin-bottom:10px; }
-        .signal-chains { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
-        .chain-tag { font-size:11px; padding:3px 10px; border-radius:6px; font-weight:600; border:1px solid; }
-        .signal-picks { display:flex; gap:8px; flex-wrap:wrap; }
-        .pick-chip { display:inline-flex; align-items:center; gap:6px; background:var(--surface2); padding:6px 12px; border-radius:8px; font-size:13px; }
-        .pick-ticker { font-weight:700; color:var(--accent); }
-        .pick-price { font-weight:600; }
-        .pick-conviction { font-size:11px; color:var(--muted); }
+        /* Ticker Card */
+        .tk-card{background:var(--s2);border-radius:10px;margin-bottom:10px;overflow:hidden;border:1px solid var(--bd);transition:border-color .2s}
+        .tk-card:hover{border-color:var(--ac)}
+        .tk-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer}
+        .tk-left{display:flex;align-items:center;gap:10px}
+        .tk-dir{width:8px;height:8px;border-radius:50%}
+        .tk-dir.bull{background:var(--gn)}
+        .tk-dir.bear{background:var(--rd)}
+        .tk-sym{font-weight:800;font-size:16px;color:var(--ac)}
+        .tk-name{color:var(--mt);font-size:13px}
+        .tk-right{text-align:right}
+        .tk-price{font-weight:700;font-size:16px}
+        .tk-chg{font-size:13px}
 
-        /* Chain Expansion */
-        .chain-expand { background:var(--surface2); border-radius:10px; margin-top:12px; overflow:hidden; }
-        .chain-layer { padding:12px 16px; border-bottom:1px solid var(--border); }
-        .chain-layer:last-child { border:none; }
-        .layer-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-        .layer-name { font-weight:700; font-size:13px; }
-        .layer-sensitivity { font-size:11px; color:var(--muted); }
-        .layer-desc { font-size:12px; color:var(--muted); margin-bottom:8px; }
-        .layer-tickers { display:flex; flex-wrap:wrap; gap:6px; }
-        .ticker-chip { background:var(--bg); padding:6px 10px; border-radius:6px; font-size:12px; display:flex; align-items:center; gap:8px; }
-        .ticker-chip .sym { font-weight:700; color:var(--accent); }
-        .ticker-chip .price { font-weight:600; }
-        .ticker-chip .chg { font-size:11px; }
-        .positive { color:var(--green); }
-        .negative { color:var(--red); }
+        /* Metrics Grid */
+        .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:1px;background:var(--bd);border-radius:8px;overflow:hidden;margin:0 16px 12px}
+        .metric{background:var(--s3);padding:10px 12px;text-align:center}
+        .metric-val{font-weight:700;font-size:14px}
+        .metric-lbl{font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
 
-        /* Suggestion Pills */
-        .suggestions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
-        .suggestion { padding:10px 16px; border-radius:20px; border:1px solid var(--border); background:var(--surface); cursor:pointer; font-size:13px; transition:all 0.2s; }
-        .suggestion:hover { border-color:var(--accent); background:var(--accent)10; transform:translateY(-1px); }
-        .suggestion-icon { margin-right:4px; }
+        /* Analysis Text */
+        .analysis{padding:0 16px 14px;font-size:13px;line-height:1.7;color:var(--mt)}
+        .analysis strong{color:var(--tx)}
 
-        /* Input Bar */
-        .input-bar { padding:12px 20px; background:var(--surface); border-top:1px solid var(--border); flex-shrink:0; }
-        .input-inner { max-width:800px; margin:0 auto; display:flex; gap:8px; }
-        .chat-input { flex:1; padding:12px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:15px; outline:none; }
-        .chat-input:focus { border-color:var(--accent); }
-        .chat-input::placeholder { color:#4b5563; }
-        .send-btn { padding:12px 20px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:14px; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
-        .send-btn:hover { opacity:0.9; }
-        .send-btn:disabled { opacity:0.5; cursor:not-allowed; }
+        /* Chain Context */
+        .tk-ctx{padding:8px 16px 12px;font-size:11px;color:var(--mt);display:flex;gap:8px;align-items:center;border-top:1px solid var(--bd)}
+        .ctx-badge{padding:2px 8px;border-radius:4px;background:var(--bg);font-weight:600}
+        .ctx-badge.imm{color:var(--yl)}
+        .ctx-badge.short{color:var(--cy)}
+        .ctx-badge.med{color:var(--ac)}
 
-        /* Typing indicator */
-        .typing { display:flex; gap:4px; padding:8px 0; }
-        .typing span { width:6px; height:6px; background:var(--muted); border-radius:50%; animation:bounce 1.4s infinite; }
-        .typing span:nth-child(2) { animation-delay:0.2s; }
-        .typing span:nth-child(3) { animation-delay:0.4s; }
-        @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-8px)} }
+        /* Layer Pipeline */
+        .pipeline{margin-top:16px}
+        .pipe-title{font-size:12px;font-weight:700;color:var(--pu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+        .pipe-layer{display:flex;align-items:stretch;margin-bottom:6px}
+        .pipe-dot{width:3px;background:var(--bd);margin-right:12px;border-radius:2px;position:relative}
+        .pipe-dot::before{content:'';position:absolute;top:12px;left:-3px;width:9px;height:9px;border-radius:50%;background:var(--pu);border:2px solid var(--bg)}
+        .pipe-content{flex:1;background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:2px}
+        .pipe-layer-name{font-weight:700;font-size:12px;margin-bottom:4px}
+        .pipe-tickers{display:flex;flex-wrap:wrap;gap:6px}
+        .pipe-tk{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg);display:flex;align-items:center;gap:4px}
+        .pipe-tk .s{font-weight:700;color:var(--ac)}
 
-        /* Summary */
-        .summary-text { font-size:14px; line-height:1.7; margin-bottom:12px; }
-        .disclaimer { font-size:11px; color:#4b5563; font-style:italic; margin-top:12px; }
+        /* Suggestions */
+        .sugg{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+        .sugg-pill{padding:10px 16px;border-radius:20px;border:1px solid var(--bd);background:var(--s1);cursor:pointer;font-size:13px;transition:all .2s}
+        .sugg-pill:hover{border-color:var(--ac);transform:translateY(-1px)}
+
+        /* Signal Cards */
+        .sig-card{background:var(--s2);border-radius:10px;padding:14px;margin-bottom:8px;border-left:3px solid var(--pu)}
+        .sig-title{font-size:14px;font-weight:600;margin-bottom:4px}
+        .sig-meta{font-size:11px;color:var(--mt);margin-bottom:6px}
+        .sig-picks{display:flex;gap:6px;flex-wrap:wrap}
+        .sig-pick{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg)}
+
+        /* Input */
+        .input-bar{padding:12px 20px;background:var(--s1);border-top:1px solid var(--bd);flex-shrink:0}
+        .input-w{max-width:820px;margin:0 auto;display:flex;gap:8px}
+        .input-w input{flex:1;padding:13px 16px;background:var(--s2);border:1px solid var(--bd);border-radius:12px;color:var(--tx);font-size:15px;outline:none}
+        .input-w input:focus{border-color:var(--ac)}
+        .input-w input::placeholder{color:#4b5563}
+        .send{padding:13px 22px;border-radius:12px;border:none;background:var(--ac);color:white;font-size:14px;font-weight:600;cursor:pointer}
+        .send:disabled{opacity:.5}
+
+        .typing{display:flex;gap:4px;padding:8px 0}
+        .typing span{width:6px;height:6px;background:var(--mt);border-radius:50%;animation:bounce 1.4s infinite}
+        .typing span:nth-child(2){animation-delay:.2s}
+        .typing span:nth-child(3){animation-delay:.4s}
+        @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+        .disc{font-size:10px;color:#374151;margin-top:12px;font-style:italic}
     </style>
 </head>
 <body>
-
 <nav class="nav">
-    <div class="nav-logo">ThetaFlow</div>
-    <div class="nav-actions">
-        <button class="btn" onclick="exportCSV()">Export CSV</button>
+    <div class="logo">ThetaFlow</div>
+    <div class="nav-r">
+        <button class="btn" onclick="location.href=API+'/export'">Export CSV</button>
         <button class="btn" id="authBtn" onclick="showAuth()">Sign In</button>
     </div>
 </nav>
 
-<div class="chat-container" id="chatContainer">
-    <div class="chat-inner" id="chatInner">
-        <!-- Welcome message -->
-        <div class="msg msg-ai">
-            <div class="msg-label">ThetaFlow</div>
-            <div class="msg-bubble">
-                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Welcome to ThetaFlow ⚡</div>
-                <p style="color:var(--muted);margin-bottom:16px;">I analyze breaking events and map their investment impact across entire value chains — from raw materials to end applications.</p>
-                <p style="margin-bottom:16px;">Ask me about any market event, or pick a suggestion below:</p>
-                <div class="suggestions" id="suggestions"></div>
-            </div>
+<div class="chat" id="chat">
+<div class="chat-w" id="chatW">
+    <div class="msg msg-a">
+        <div class="lbl">ThetaFlow</div>
+        <div class="bub">
+            <div style="font-size:20px;font-weight:800;margin-bottom:8px;">Map Events to Investment Opportunities ⚡</div>
+            <p style="color:var(--mt);margin-bottom:16px;">Paste a headline or pick a scenario. I'll trace the impact through the full value chain — from power generation to SaaS — with real financial analysis.</p>
+            <div class="sugg" id="sugg"></div>
         </div>
-
-        <!-- Auto-loaded signals will appear here -->
-        <div id="signalsArea"></div>
     </div>
+    <div id="msgs"></div>
+</div>
 </div>
 
 <div class="input-bar">
-    <div class="input-inner">
-        <input type="text" class="chat-input" id="chatInput" placeholder="Ask about any market event, company, or macro trend..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}">
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()">Analyze →</button>
-    </div>
-</div>
-
-<!-- Auth Modal -->
-<div style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;" id="authModal">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:90%;max-width:400px;padding:32px;position:relative;">
-        <button onclick="document.getElementById('authModal').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;">&times;</button>
-        <h3 id="authTitle" style="margin-bottom:16px;text-align:center;">Sign In</h3>
-        <div id="authError" style="display:none;color:var(--red);font-size:13px;margin-bottom:12px;text-align:center;"></div>
-        <input type="email" id="authEmail" placeholder="Email" style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);margin-bottom:12px;outline:none;font-size:14px;">
-        <input type="password" id="authPassword" placeholder="Password" style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);margin-bottom:16px;outline:none;font-size:14px;">
-        <button class="send-btn" style="width:100%;padding:12px;margin-bottom:12px;" onclick="submitAuth()">Sign In</button>
-        <p style="text-align:center;font-size:13px;color:var(--muted);" id="authToggleText">
-            Don't have an account? <a href="#" onclick="toggleAuth()" style="color:var(--accent);">Register</a>
-        </p>
+    <div class="input-w">
+        <input id="inp" placeholder="e.g. NVIDIA beats earnings by 20%, TSMC builds US fabs, Fed cuts rates..." onkeydown="if(event.key==='Enter'){event.preventDefault();send()}">
+        <button class="send" id="sendBtn" onclick="send()">Analyze →</button>
     </div>
 </div>
 
 <script>
-const API = window.location.origin + '/api';
-let authMode = 'login';
-let currentUser = null;
-
-// ── Suggestions ──
-
-const SUGGESTIONS = [
-    { icon: '🤖', text: 'What if NVIDIA beats earnings by 20%?' },
-    { icon: '⚛️', text: 'Impact of new nuclear plant for data centers' },
-    { icon: '💊', text: 'Eli Lilly GLP-1 drug gets FDA fast-track approval' },
-    { icon: '🔒', text: 'Major ransomware attack hits US healthcare system' },
-    { icon: '⚡', text: 'Biden signs $50B clean energy infrastructure bill' },
-    { icon: '🏭', text: 'TSMC announces $100B investment in US chip fabs' },
+const API=location.origin+'/api';
+const SUGG=[
+    {i:'🤖',t:'What if NVIDIA beats earnings by 20%?'},
+    {i:'⚛️',t:'New nuclear power plant approved for AI data centers'},
+    {i:'💊',t:'Eli Lilly GLP-1 drug gets FDA fast-track approval'},
+    {i:'🔒',t:'Major ransomware attack hits US healthcare system'},
+    {i:'⚡',t:'Congress passes $50B clean energy infrastructure bill'},
+    {i:'🏭',t:'TSMC announces $100B investment in US chip fabs'},
 ];
 
-function renderSuggestions() {
-    const el = document.getElementById('suggestions');
-    el.innerHTML = SUGGESTIONS.map(s =>
-        `<div class="suggestion" onclick="submitSuggestion('${s.text.replace(/'/g, "\\'")}')">
-            <span class="suggestion-icon">${s.icon}</span> ${s.text}
-        </div>`
-    ).join('');
+document.getElementById('sugg').innerHTML=SUGG.map(s=>`<div class="sugg-pill" onclick="pick('${s.t.replace(/'/g,"\\'")}')">${s.i} ${s.t}</div>`).join('');
+
+function pick(t){document.getElementById('inp').value=t;send()}
+function scrollEnd(){const c=document.getElementById('chat');setTimeout(()=>c.scrollTop=c.scrollHeight,50)}
+
+function addUser(t){
+    document.getElementById('msgs').insertAdjacentHTML('beforeend',
+        `<div class="msg msg-u"><div class="bub">${t}</div></div>`);
+    scrollEnd();
 }
-
-function submitSuggestion(text) {
-    document.getElementById('chatInput').value = text;
-    sendMessage();
+function addTyping(){
+    document.getElementById('msgs').insertAdjacentHTML('beforeend',
+        `<div class="msg msg-a" id="typing"><div class="lbl">ThetaFlow</div><div class="bub"><div class="typing"><span></span><span></span><span></span></div></div></div>`);
+    scrollEnd();
 }
+function rmTyping(){const e=document.getElementById('typing');if(e)e.remove()}
 
-// ── Chat Messages ──
+function renderAnalysis(d){
+    let h='<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub">';
 
-function addUserMessage(text) {
-    const html = `<div class="msg msg-user"><div class="msg-bubble">${text}</div></div>`;
-    document.getElementById('signalsArea').insertAdjacentHTML('beforeend', html);
-    scrollToBottom();
-}
+    // Verdict banner
+    const topDir=d.top_picks?.[0]?.direction||'bullish';
+    const topConv=d.top_picks?.[0]?.conviction||0;
+    const verdictText=topConv>.7?'Strong Conviction':topConv>.4?'Moderate Conviction':'Monitoring';
+    h+=`<div class="verdict ${topDir==='bullish'?'bull':'bear'}">
+        <span>${topDir==='bullish'?'🟢 BULLISH':'🔴 BEARISH'}</span>
+        <span style="flex:1;font-weight:400;font-size:13px;color:var(--mt)">${verdictText}</span>
+        <div class="verdict-bar"><div class="verdict-fill" style="width:${topConv*100}%;background:${topDir==='bullish'?'var(--gn)':'var(--rd)'}"></div></div>
+        <span style="font-size:13px">${(topConv*100).toFixed(0)}%</span>
+    </div>`;
 
-function addTypingIndicator() {
-    const html = `<div class="msg msg-ai" id="typingMsg"><div class="msg-label">ThetaFlow</div><div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div></div>`;
-    document.getElementById('signalsArea').insertAdjacentHTML('beforeend', html);
-    scrollToBottom();
-}
-
-function removeTypingIndicator() {
-    const el = document.getElementById('typingMsg');
-    if (el) el.remove();
-}
-
-function addAnalysisMessage(data) {
-    let html = '<div class="msg msg-ai"><div class="msg-label">ThetaFlow</div><div class="msg-bubble">';
+    // Chain flow pills
+    if(d.chains?.length){
+        h+='<div class="chain-flow">';
+        d.chains.forEach((c,i)=>{
+            if(i>0) h+='<span class="flow-arrow">+</span>';
+            h+=`<span class="chain-pill" style="border-color:${c.theme_color};color:${c.theme_color}">${c.chain_name}</span>`;
+        });
+        h+='</div>';
+    }
 
     // Summary
-    if (data.summary) {
-        html += `<div class="summary-text">${data.summary}</div>`;
-    }
+    if(d.summary) h+=`<p style="font-size:14px;margin-bottom:16px;line-height:1.7">${d.summary}</p>`;
 
-    // Chain tags
-    if (data.chains && data.chains.length) {
-        html += '<div class="signal-chains">';
-        data.chains.forEach(c => {
-            html += `<span class="chain-tag" style="border-color:${c.theme_color};color:${c.theme_color};">${c.chain_name} ${(c.relevance_score*100).toFixed(0)}%</span>`;
-        });
-        html += '</div>';
-    }
+    // Ticker cards
+    if(d.top_picks?.length){
+        d.top_picks.forEach(t=>{
+            const f=t.financials||{};
+            const chgCls=(t.change_pct||0)>=0?'positive':'negative';
+            const chgStr=t.current_price?`${t.change_pct>=0?'+':''}${t.change_pct.toFixed(1)}%`:'';
+            const prStr=t.current_price?`$${t.current_price.toFixed(2)}`:'';
+            const hzCls=t.time_horizon==='immediate'?'imm':t.time_horizon==='short_term'?'short':'med';
 
-    // Top picks with full financial analysis
-    if (data.top_picks && data.top_picks.length) {
-        html += '<div style="margin-top:16px;margin-bottom:8px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Investment Analysis</div>';
-        data.top_picks.forEach(t => {
-            const dir = t.direction === 'bullish' ? '🟢' : '🔴';
-            const priceStr = t.current_price ? `$${t.current_price.toFixed(2)}` : '';
-            const chgClass = (t.change_pct || 0) >= 0 ? 'positive' : 'negative';
-            const chgStr = t.current_price ? `${t.change_pct >= 0 ? '+' : ''}${t.change_pct.toFixed(1)}%` : '';
-            const f = t.financials || {};
-
-            html += `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid ${t.direction === 'bullish' ? 'var(--green)' : 'var(--red)'};">`;
-
-            // Header row: ticker, price, change
-            html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <div>
-                    ${dir} <strong style="color:var(--accent);font-size:16px;">${t.ticker}</strong>
-                    <span style="color:var(--muted);margin-left:6px;">${t.company}</span>
+            h+=`<div class="tk-card">`;
+            // Header
+            h+=`<div class="tk-head">
+                <div class="tk-left">
+                    <div class="tk-dir ${t.direction==='bullish'?'bull':'bear'}"></div>
+                    <span class="tk-sym">${t.ticker}</span>
+                    <span class="tk-name">${t.company}</span>
                 </div>
-                <div style="text-align:right;">
-                    <span style="font-weight:700;font-size:16px;">${priceStr}</span>
-                    <span class="${chgClass}" style="margin-left:6px;">${chgStr}</span>
+                <div class="tk-right">
+                    <div class="tk-price">${prStr}</div>
+                    <div class="tk-chg ${chgCls}">${chgStr}</div>
                 </div>
             </div>`;
 
-            // Financial metrics row
-            if (f.market_cap || f.pe_forward || f.revenue_growth !== undefined) {
-                html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;font-size:12px;">';
-                if (f.market_cap) html += `<span style="color:var(--muted);">Cap: <strong>${f.market_cap}</strong></span>`;
-                if (f.pe_forward) html += `<span style="color:var(--muted);">Fwd P/E: <strong>${f.pe_forward}x</strong></span>`;
-                if (f.revenue_growth !== null && f.revenue_growth !== undefined) html += `<span style="color:var(--muted);">Rev Growth: <strong class="${f.revenue_growth >= 0 ? 'positive' : 'negative'}">${f.revenue_growth > 0 ? '+' : ''}${f.revenue_growth}%</strong></span>`;
-                if (f.profit_margin !== null && f.profit_margin !== undefined) html += `<span style="color:var(--muted);">Margin: <strong>${f.profit_margin}%</strong></span>`;
-                if (f.analyst_upside_pct !== null && f.analyst_upside_pct !== undefined) html += `<span style="color:var(--muted);">Analyst Target: <strong class="${f.analyst_upside_pct >= 0 ? 'positive' : 'negative'}">${f.analyst_upside_pct > 0 ? '+' : ''}${f.analyst_upside_pct}% upside</strong></span>`;
-                html += '</div>';
+            // Metrics grid
+            const mets=[];
+            if(f.market_cap)mets.push({v:f.market_cap,l:'Mkt Cap'});
+            if(f.pe_forward)mets.push({v:f.pe_forward+'x',l:'Fwd P/E'});
+            if(f.pe_trailing)mets.push({v:f.pe_trailing+'x',l:'P/E TTM'});
+            if(f.revenue_growth!=null)mets.push({v:(f.revenue_growth>0?'+':'')+f.revenue_growth+'%',l:'Rev Growth',c:f.revenue_growth>=0?'var(--gn)':'var(--rd)'});
+            if(f.profit_margin!=null)mets.push({v:f.profit_margin+'%',l:'Margin'});
+            if(f.analyst_upside_pct!=null)mets.push({v:(f.analyst_upside_pct>0?'+':'')+f.analyst_upside_pct+'%',l:'Analyst Target',c:f.analyst_upside_pct>=0?'var(--gn)':'var(--rd)'});
+            if(f.distance_from_high_pct!=null)mets.push({v:f.distance_from_high_pct+'%',l:'From 52w High'});
+            if(f.beta)mets.push({v:f.beta,l:'Beta'});
+
+            if(mets.length){
+                h+='<div class="metrics">';
+                mets.forEach(m=>h+=`<div class="metric"><div class="metric-val"${m.c?` style="color:${m.c}"`:``}>${m.v}</div><div class="metric-lbl">${m.l}</div></div>`);
+                h+='</div>';
             }
 
-            // Investment analysis paragraph
-            if (t.investment_analysis) {
-                html += `<div style="font-size:13px;line-height:1.6;color:var(--text);margin-bottom:8px;">${t.investment_analysis}</div>`;
+            // Analysis
+            if(t.investment_analysis){
+                h+=`<div class="analysis">${t.investment_analysis}</div>`;
             }
 
-            // Context line
-            html += `<div style="font-size:11px;color:var(--muted);">${t.chain_name} → ${t.layer} · ${t.time_horizon.replace('_',' ')} · ${(t.conviction*100).toFixed(0)}% conviction</div>`;
-            html += '</div>';
+            // Context bar
+            h+=`<div class="tk-ctx">
+                <span class="ctx-badge ${hzCls}">${t.time_horizon.replace('_',' ')}</span>
+                <span>${t.chain_name} → ${t.layer}</span>
+                <span style="margin-left:auto">${t.exposure} exposure</span>
+            </div>`;
+            h+='</div>';
         });
     }
 
-    // Full chain expansion for all recommendations
-    if (data.recommendations && data.recommendations.length) {
-        // Group by chain → layer
-        const byChain = {};
-        data.recommendations.forEach(r => {
-            if (!byChain[r.chain_name]) byChain[r.chain_name] = {};
-            if (!byChain[r.chain_name][r.layer]) byChain[r.chain_name][r.layer] = [];
+    // Pipeline visualization
+    if(d.recommendations?.length){
+        const byChain={};
+        d.recommendations.forEach(r=>{
+            if(!byChain[r.chain_name])byChain[r.chain_name]={};
+            if(!byChain[r.chain_name][r.layer])byChain[r.chain_name][r.layer]=[];
             byChain[r.chain_name][r.layer].push(r);
         });
-
-        for (const [chainName, layers] of Object.entries(byChain)) {
-            html += `<div class="chain-expand" style="margin-top:12px;">`;
-            html += `<div style="padding:10px 16px;font-weight:700;font-size:13px;border-bottom:1px solid var(--border);color:var(--purple);">⛓️ ${chainName} — Full Value Chain</div>`;
-
-            for (const [layerName, tickers] of Object.entries(layers)) {
-                html += `<div class="chain-layer">`;
-                html += `<div class="layer-name">${layerName}</div>`;
-                html += `<div class="layer-tickers">`;
-                tickers.forEach(t => {
-                    const dir = t.direction === 'bullish' ? '🟢' : '🔴';
-                    const priceStr = t.current_price ? `$${t.current_price.toFixed(2)}` : '';
-                    const chgClass = (t.change_pct || 0) >= 0 ? 'positive' : 'negative';
-                    const chgStr = t.current_price ? `(${t.change_pct >= 0 ? '+' : ''}${t.change_pct.toFixed(1)}%)` : '';
-                    html += `<div class="ticker-chip">
-                        ${dir} <span class="sym">${t.ticker}</span>
-                        <span class="price">${priceStr}</span>
-                        <span class="chg ${chgClass}">${chgStr}</span>
-                    </div>`;
+        for(const[cn,layers] of Object.entries(byChain)){
+            h+=`<div class="pipeline"><div class="pipe-title">⛓️ ${cn} Value Chain</div>`;
+            for(const[ln,tks] of Object.entries(layers)){
+                h+=`<div class="pipe-layer"><div class="pipe-dot"></div><div class="pipe-content">
+                    <div class="pipe-layer-name">${ln}</div>
+                    <div class="pipe-tickers">`;
+                tks.forEach(t=>{
+                    const p=t.current_price?`$${t.current_price.toFixed(0)}`:'';
+                    const c=(t.change_pct||0)>=0?'positive':'negative';
+                    const cs=t.current_price?`${t.change_pct>=0?'+':''}${t.change_pct.toFixed(1)}%`:'';
+                    h+=`<div class="pipe-tk"><span class="s">${t.ticker}</span> ${p} <span class="${c}">${cs}</span></div>`;
                 });
-                html += '</div></div>';
+                h+='</div></div></div>';
             }
-            html += '</div>';
+            h+='</div>';
         }
     }
 
-    html += '<div class="disclaimer">Not financial advice. For informational purposes only.</div>';
-    html += '</div></div>';
-
-    document.getElementById('signalsArea').insertAdjacentHTML('beforeend', html);
-    scrollToBottom();
+    h+='<div class="disc">Not financial advice. Trend-based analysis for informational purposes only.</div>';
+    h+='</div></div>';
+    document.getElementById('msgs').insertAdjacentHTML('beforeend',h);
+    scrollEnd();
 }
 
-function addSignalCards(signals) {
-    if (!signals.length) return;
-
-    let html = '<div class="msg msg-ai"><div class="msg-label">ThetaFlow · Latest Signals</div><div class="msg-bubble">';
-    html += `<div style="font-weight:700;margin-bottom:12px;">📡 ${signals.length} events matched to value chains in the last 72 hours:</div>`;
-
-    signals.forEach(s => {
-        const severity = s.severity === 'high' ? '🔴' : '🟡';
-        const chains = (s.chains || []).map(c =>
-            `<span class="chain-tag" style="border-color:${c.theme_color || 'var(--border)'};color:${c.theme_color || 'var(--muted)'};">${c.chain_name}</span>`
-        ).join(' ');
-        const picks = (s.top_picks || []).map(t => {
-            const dir = t.direction === 'bullish' ? '🟢' : '🔴';
-            return `<div class="pick-chip">${dir} <span class="pick-ticker">${t.ticker}</span> <span class="pick-conviction">${(t.conviction*100).toFixed(0)}%</span></div>`;
-        }).join('');
-
-        html += `<div class="signal-card">
-            <div class="signal-headline">${severity} ${s.title}</div>
-            <div class="signal-meta">${s.source} · ${getTimeAgo(s.timestamp)}</div>
-            <div class="signal-chains">${chains}</div>
-            <div class="signal-picks">${picks}</div>
-        </div>`;
-    });
-
-    html += '</div></div>';
-    document.getElementById('signalsArea').insertAdjacentHTML('beforeend', html);
-    scrollToBottom();
+async function send(){
+    const inp=document.getElementById('inp');
+    const t=inp.value.trim();if(!t)return;
+    inp.value='';
+    addUser(t);addTyping();
+    document.getElementById('sendBtn').disabled=true;
+    try{
+        const r=await fetch(`${API}/analyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({headline:t})});
+        const d=await r.json();rmTyping();
+        if(d.success&&d.chains_matched>0){renderAnalysis(d)}
+        else{document.getElementById('msgs').insertAdjacentHTML('beforeend',
+            `<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub"><p>I couldn't map this to any tracked value chains. Try mentioning specific companies, sectors (AI, semiconductors, cybersecurity), or macro events (rate cuts, energy policy).</p></div></div>`);scrollEnd()}
+    }catch(e){rmTyping();document.getElementById('msgs').insertAdjacentHTML('beforeend',
+        `<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub"><p style="color:var(--rd)">Analysis failed. Please try again.</p></div></div>`);scrollEnd()}
+    document.getElementById('sendBtn').disabled=false;
 }
 
-// ── Core Actions ──
-
-async function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const text = input.value.trim();
-    if (!text) return;
-
-    input.value = '';
-    addUserMessage(text);
-    addTypingIndicator();
-
-    document.getElementById('sendBtn').disabled = true;
-
-    try {
-        const resp = await fetch(`${API}/analyze`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ headline: text })
+// Load signals
+async function loadSigs(){
+    try{
+        const r=await fetch(`${API}/signals?hours=72&limit=4`);
+        const d=await r.json();
+        if(!d.success||!d.signals.length)return;
+        let h='<div class="msg msg-a"><div class="lbl">ThetaFlow · Live Feed</div><div class="bub">';
+        h+=`<div style="font-weight:700;margin-bottom:10px">📡 ${d.count} catalysts detected in the last 72 hours</div>`;
+        d.signals.forEach(s=>{
+            const sev=s.severity==='high'?'🔴':'🟡';
+            const chains=(s.chains||[]).map(c=>`<span class="chain-pill" style="border-color:${c.theme_color||'var(--bd)'};color:${c.theme_color||'var(--mt)'};font-size:10px;padding:2px 8px">${c.chain_name}</span>`).join(' ');
+            const picks=(s.top_picks||[]).map(t=>`<span class="sig-pick"><strong style="color:var(--ac)">${t.ticker}</strong> ${(t.conviction*100).toFixed(0)}%</span>`).join('');
+            h+=`<div class="sig-card"><div class="sig-title">${sev} ${s.title}</div><div class="sig-meta">${s.source} · ${ago(s.timestamp)}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${chains}</div><div class="sig-picks">${picks}</div></div>`;
         });
-        const data = await resp.json();
-        removeTypingIndicator();
-
-        if (data.success && data.chains_matched > 0) {
-            addAnalysisMessage(data);
-        } else {
-            addAnalysisMessage({
-                summary: "I couldn't map this event to any tracked value chains. Try mentioning specific companies, sectors, or technologies like AI, semiconductors, cybersecurity, clean energy, or GLP-1 drugs.",
-                chains: [], top_picks: [], recommendations: []
-            });
-        }
-    } catch(e) {
-        removeTypingIndicator();
-        addAnalysisMessage({ summary: "Failed to analyze. Please try again.", chains: [], top_picks: [], recommendations: [] });
-    }
-
-    document.getElementById('sendBtn').disabled = false;
+        h+='</div></div>';
+        document.getElementById('msgs').insertAdjacentHTML('beforeend',h);scrollEnd();
+    }catch(e){}
 }
 
-async function loadSignals() {
-    try {
-        const resp = await fetch(`${API}/signals?hours=72&limit=5`);
-        const data = await resp.json();
-        if (data.success && data.signals.length) {
-            addSignalCards(data.signals);
-        }
-    } catch(e) {}
-}
+function ago(ts){const d=(Date.now()-new Date(ts).getTime())/1000;if(d<3600)return`${Math.floor(d/60)}m`;if(d<86400)return`${Math.floor(d/3600)}h`;return`${Math.floor(d/86400)}d`}
 
-function scrollToBottom() {
-    const container = document.getElementById('chatContainer');
-    setTimeout(() => container.scrollTop = container.scrollHeight, 50);
-}
+// Auth
+let authMode='login',user=null;
+async function checkAuth(){try{const r=await fetch(`${API}/auth/me`,{credentials:'same-origin'});const d=await r.json();if(d.authenticated){user=d.user;document.getElementById('authBtn').textContent=d.user.email.split('@')[0]}}catch(e){}}
+function showAuth(){if(user){if(confirm(`${user.email}\nTier: ${user.tier}\n\nSign out?`)){fetch(`${API}/auth/logout`,{method:'POST',credentials:'same-origin'});user=null;document.getElementById('authBtn').textContent='Sign In'}return}authMode='login';document.getElementById('authM').style.display='flex'}
+function toggleAuth(){authMode=authMode==='login'?'register':'login';document.getElementById('authT').textContent=authMode==='login'?'Sign In':'Create Account'}
+async function submitAuth(){const e=document.getElementById('aE').value,p=document.getElementById('aP').value;try{const r=await fetch(`${API}/auth/${authMode==='login'?'login':'register'}`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({email:e,password:p})});const d=await r.json();if(d.success||d.user){user=d.user;document.getElementById('authBtn').textContent=d.user.email.split('@')[0];document.getElementById('authM').style.display='none'}}catch(e){}}
 
-function getTimeAgo(ts) {
-    const diff = (Date.now() - new Date(ts).getTime()) / 1000;
-    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
-    return `${Math.floor(diff/86400)}d ago`;
-}
-
-function exportCSV() { window.location.href = `${API}/export`; }
-
-// ── Auth ──
-async function checkAuth() {
-    try {
-        const resp = await fetch(`${API}/auth/me`, {credentials:'same-origin'});
-        const data = await resp.json();
-        if (data.authenticated) {
-            currentUser = data.user;
-            document.getElementById('authBtn').textContent = data.user.email.split('@')[0];
-        }
-    } catch(e) {}
-}
-
-function showAuth() {
-    if (currentUser) {
-        if (confirm(`${currentUser.email}\nTier: ${currentUser.tier}\n\nSign out?`)) {
-            fetch(`${API}/auth/logout`, {method:'POST',credentials:'same-origin'});
-            currentUser = null;
-            document.getElementById('authBtn').textContent = 'Sign In';
-        }
-        return;
-    }
-    authMode = 'login';
-    document.getElementById('authTitle').textContent = 'Sign In';
-    document.getElementById('authModal').style.display = 'flex';
-}
-
-function toggleAuth() {
-    authMode = authMode === 'login' ? 'register' : 'login';
-    document.getElementById('authTitle').textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
-    document.getElementById('authToggleText').innerHTML = authMode === 'login'
-        ? 'Don\'t have an account? <a href="#" onclick="toggleAuth()" style="color:var(--accent);">Register</a>'
-        : 'Already have an account? <a href="#" onclick="toggleAuth()" style="color:var(--accent);">Sign In</a>';
-}
-
-async function submitAuth() {
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
-    try {
-        const resp = await fetch(`${API}${endpoint}`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            credentials:'same-origin', body:JSON.stringify({email,password})
-        });
-        const data = await resp.json();
-        if (data.success || data.user) {
-            currentUser = data.user;
-            document.getElementById('authBtn').textContent = data.user.email.split('@')[0];
-            document.getElementById('authModal').style.display = 'none';
-        } else {
-            document.getElementById('authError').textContent = data.error;
-            document.getElementById('authError').style.display = 'block';
-        }
-    } catch(e) {}
-}
-
-// ── Init ──
-renderSuggestions();
-loadSignals();
-checkAuth();
-document.getElementById('chatInput').focus();
+loadSigs();checkAuth();document.getElementById('inp').focus();
 </script>
+
+<div style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center" id="authM">
+<div style="background:var(--s1);border:1px solid var(--bd);border-radius:16px;width:90%;max-width:400px;padding:32px;position:relative">
+<button onclick="document.getElementById('authM').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--mt);font-size:24px;cursor:pointer">&times;</button>
+<h3 id="authT" style="margin-bottom:16px;text-align:center">Sign In</h3>
+<input type="email" id="aE" placeholder="Email" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);margin-bottom:12px;outline:none;font-size:14px">
+<input type="password" id="aP" placeholder="Password" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);margin-bottom:16px;outline:none;font-size:14px">
+<button class="send" style="width:100%;padding:12px;margin-bottom:12px" onclick="submitAuth()">Sign In</button>
+<p style="text-align:center;font-size:13px;color:var(--mt)">Don't have an account? <a href="#" onclick="toggleAuth()" style="color:var(--ac)">Register</a></p>
+</div></div>
 </body>
 </html>
