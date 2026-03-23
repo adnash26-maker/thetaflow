@@ -39,7 +39,7 @@ from ai_analyst import AIAnalyst
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("thetaflow.api")
 
-_frontend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
+_frontend_dir = os.getenv("THETAFLOW_FRONTEND", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend"))
 app = Flask(__name__, static_folder=_frontend_dir, static_url_path="")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", secrets.token_hex(32))
 CORS(app, supports_credentials=True)

@@ -2,8 +2,16 @@
 import sys
 import os
 
-# Add backend to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend"))
+# Resolve paths from this file's location (repo root)
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.join(ROOT_DIR, "backend")
+FRONTEND_DIR = os.path.join(ROOT_DIR, "frontend")
+
+# Add backend to Python path so imports work
+sys.path.insert(0, BACKEND_DIR)
+
+# Set env var so app.py can find frontend
+os.environ["THETAFLOW_FRONTEND"] = FRONTEND_DIR
 
 from app import app
 
