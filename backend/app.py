@@ -32,6 +32,7 @@ from event_ingestion import EventDatabase, EventOrchestrator
 from impact_engine import ImpactEngine
 from value_chains import ALL_CHAINS, find_chains_for_event, get_chain_tickers
 from stock_universe import StockUniverse, load_sec_with_sic
+from ai_analyst import AIAnalyst
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("thetaflow.api")
@@ -46,6 +47,7 @@ db = EventDatabase(DB_PATH)
 orchestrator = EventOrchestrator(db)
 engine = ImpactEngine(DB_PATH)
 universe = StockUniverse(DB_PATH)
+analyst = AIAnalyst()
 
 last_collection_at = None
 
@@ -191,15 +193,67 @@ def get_signals():
     })
 
 @app.route("/api/analyze", methods=["POST"])
-def analyze_event():
-    """Analyze a news headline or event and get investment recommendations."""
+def analyze_event_endpoint():
+    """Analyze a news headline with AI-powered contextual reasoning."""
     data = request.json or {}
     headline = data.get("headline", "").strip()
     if not headline:
         return jsonify({"error": "headline is required"}), 400
 
     event_type = data.get("event_type", "news")
+
+    # Step 1: Get chain matches and ticker recommendations from impact engine
     analysis = engine.analyze_event(headline, event_type)
+
+    # Step 2: If Claude is available, generate real contextual analysis
+    if analyst.available and analysis.get("chains_matched", 0) > 0:
+        try:
+            # Build ticker data for Claude
+            ticker_data = []
+            for t in analysis.get("top_picks", [])[:5]:
+                ticker_data.append({
+                    "ticker": t["ticker"],
+                    "company": t["company"],
+                    "current_price": t.get("current_price", 0),
+                    "change_pct": t.get("change_pct", 0),
+                    "chain_name": t.get("chain_name", ""),
+                    "layer": t.get("layer", ""),
+                    "exposure": t.get("exposure", ""),
+                    "thesis": t.get("thesis", ""),
+                    "financials": t.get("financials", {}),
+                })
+
+            ai_result = analyst.analyze_event(
+                headline,
+                analysis.get("chains", []),
+                ticker_data
+            )
+
+            # Merge AI analysis into the response
+            if ai_result.get("summary"):
+                analysis["summary"] = ai_result["summary"]
+            if ai_result.get("risk_factors"):
+                analysis["risk_factors"] = ai_result["risk_factors"]
+            if ai_result.get("contrarian_view"):
+                analysis["contrarian_view"] = ai_result["contrarian_view"]
+            if ai_result.get("time_horizon"):
+                analysis["ai_time_horizon"] = ai_result["time_horizon"]
+
+            # Merge per-ticker AI analysis into top_picks
+            ticker_analyses = ai_result.get("ticker_analyses", {})
+            for pick in analysis.get("top_picks", []):
+                ai_text = ticker_analyses.get(pick["ticker"])
+                if ai_text:
+                    pick["investment_analysis"] = ai_text
+
+            analysis["ai_powered"] = True
+
+        except Exception as e:
+            logger.error(f"AI analysis enhancement failed: {e}")
+            analysis["ai_powered"] = False
+    else:
+        analysis["ai_powered"] = False
+
     return jsonify({"success": True, **analysis})
 
 @app.route("/api/events", methods=["GET"])

@@ -264,6 +264,26 @@ function renderAnalysis(d){
         });
     }
 
+    // Risk factors & contrarian view (from AI)
+    if(d.risk_factors?.length || d.contrarian_view){
+        h+='<div style="margin-top:16px;background:var(--s2);border-radius:10px;padding:14px;border-left:3px solid var(--yl)">';
+        if(d.risk_factors?.length){
+            h+='<div style="font-size:12px;font-weight:700;color:var(--yl);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⚠️ Risk Factors</div>';
+            h+='<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--mt)">';
+            d.risk_factors.forEach(r=>h+=`<li style="margin-bottom:4px">${r}</li>`);
+            h+='</ul>';
+        }
+        if(d.contrarian_view){
+            h+=`<div style="margin-top:10px;font-size:13px;color:var(--mt)"><strong style="color:var(--yl)">🔄 Contrarian View:</strong> ${d.contrarian_view}</div>`;
+        }
+        h+='</div>';
+    }
+
+    // AI badge
+    if(d.ai_powered){
+        h+='<div style="margin-top:12px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ac)"><span style="width:6px;height:6px;background:var(--ac);border-radius:50%;display:inline-block"></span> Analysis powered by Claude AI</div>';
+    }
+
     // Pipeline visualization
     if(d.recommendations?.length){
         const byChain={};
