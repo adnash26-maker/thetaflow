@@ -171,6 +171,63 @@
         @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
         .disc{font-size:10px;color:#374151;margin-top:12px;font-style:italic}
 
+        /* ── Nav Menu ── */
+        .nav-left{display:flex;align-items:center;gap:12px;position:relative}
+        .menu-btn{background:none;border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;padding:6px 8px;font-size:16px;line-height:1;transition:all .2s}
+        .menu-btn:hover{border-color:var(--ac);background:var(--s2)}
+        .nav-drop{display:none;position:absolute;top:100%;left:0;margin-top:8px;background:var(--s1);border:1px solid var(--bd);border-radius:10px;min-width:220px;padding:6px;z-index:100;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+        .nav-drop.open{display:block}
+        .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--mt);transition:all .15s}
+        .nav-item:hover{background:var(--s2);color:var(--tx)}
+        .nav-item.active{background:var(--ac)15;color:var(--ac)}
+        .nav-item-icon{font-size:16px;width:20px;text-align:center}
+        .nav-sep{height:1px;background:var(--bd);margin:4px 8px}
+
+        /* ── Views ── */
+        .view{display:none;flex:1;overflow-y:auto}
+        .view.active{display:flex;flex-direction:column}
+        .view-content{max-width:920px;margin:0 auto;padding:20px;width:100%}
+        .view-title{font-size:20px;font-weight:800;margin-bottom:4px}
+        .view-sub{font-size:13px;color:var(--mt);margin-bottom:20px}
+
+        /* Stock Picks */
+        .picks-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+        .pick-card{background:var(--s2);border-radius:10px;padding:14px;border:1px solid var(--bd);cursor:pointer;transition:border-color .2s}
+        .pick-card:hover{border-color:var(--ac)}
+        .pick-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+        .pick-ticker{font-weight:800;font-size:16px;color:var(--ac)}
+        .pick-price{font-weight:700;font-size:14px}
+        .pick-company{font-size:11px;color:var(--mt);margin-bottom:6px}
+        .pick-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+        .pick-chain{font-size:10px;color:var(--mt);padding:2px 6px;border-radius:4px;background:var(--bg)}
+        .pick-filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+        .pick-filter{padding:6px 14px;border-radius:16px;border:1px solid var(--bd);background:var(--s1);cursor:pointer;font-size:12px;transition:all .2s}
+        .pick-filter:hover,.pick-filter.active{border-color:var(--ac);color:var(--ac)}
+
+        /* Portfolio */
+        .port-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+        .port-stat{background:var(--s2);border-radius:10px;padding:16px;text-align:center;border:1px solid var(--bd)}
+        .port-stat-val{font-size:24px;font-weight:800;color:var(--ac)}
+        .port-stat-lbl{font-size:11px;color:var(--mt);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+        .chain-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+        .chain-bar-row{display:flex;align-items:center;gap:12px}
+        .chain-bar-name{font-size:12px;font-weight:600;min-width:140px}
+        .chain-bar-track{flex:1;height:24px;background:var(--bg);border-radius:6px;overflow:hidden;position:relative}
+        .chain-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:white;transition:width .5s ease}
+        .chain-bar-count{font-size:12px;color:var(--mt);min-width:30px;text-align:right}
+
+        /* Trending */
+        .trend-section{margin-bottom:24px}
+        .trend-section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:10px}
+        .trend-card{background:var(--s2);border-radius:8px;padding:12px;margin-bottom:6px;border:1px solid var(--bd);display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .2s}
+        .trend-card:hover{border-color:var(--ac)}
+        .trend-ticker{font-weight:800;color:var(--ac);min-width:48px}
+        .trend-body{flex:1;min-width:0}
+        .trend-headline{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .trend-meta{font-size:10px;color:var(--mt)}
+        .trend-pnl{font-weight:800;font-family:monospace;min-width:50px;text-align:right}
+        .trend-empty{text-align:center;padding:40px;color:var(--mt);font-size:14px}
+
         /* ── Responsive ── */
 
         /* Desktop: wider content area */
@@ -247,6 +304,15 @@
 
             /* Pipeline */
             .pipe-tk{font-size:10px;padding:2px 6px}
+
+            /* Nav dropdown mobile */
+            .nav-drop{left:-12px;right:-12px;min-width:auto}
+
+            /* Views mobile */
+            .picks-grid{grid-template-columns:1fr}
+            .port-stats{grid-template-columns:1fr}
+            .chain-bar-name{min-width:100px;font-size:11px}
+            .view-content{padding:14px}
         }
 
         /* Very small phones */
@@ -261,13 +327,25 @@
 </head>
 <body>
 <nav class="nav">
-    <div class="logo">ThetaFlow</div>
+    <div class="nav-left">
+        <button class="menu-btn" onclick="toggleMenu()" id="menuBtn">☰</button>
+        <div class="logo" style="cursor:pointer" onclick="showView('analyze')">ThetaFlow</div>
+        <div class="nav-drop" id="navDrop">
+            <div class="nav-item active" data-view="analyze" onclick="showView('analyze')"><span class="nav-item-icon">⚡</span> Analyze</div>
+            <div class="nav-item" data-view="picks" onclick="showView('picks')"><span class="nav-item-icon">🎯</span> Stock Picks</div>
+            <div class="nav-item" data-view="portfolio" onclick="showView('portfolio')"><span class="nav-item-icon">📊</span> Portfolio</div>
+            <div class="nav-item" data-view="trending" onclick="showView('trending')"><span class="nav-item-icon">🔥</span> Trending Trades</div>
+            <div class="nav-sep"></div>
+            <div class="nav-item" onclick="location.href=API+'/export'"><span class="nav-item-icon">📤</span> Export CSV</div>
+        </div>
+    </div>
     <div class="nav-r">
-        <button class="btn" onclick="location.href=API+'/export'">Export CSV</button>
         <button class="btn" id="authBtn" onclick="showAuth()">Sign In</button>
     </div>
 </nav>
 
+<!-- View: Analyze (default) -->
+<div class="view active" id="view-analyze">
 <div class="chat" id="chat">
 <div class="chat-w" id="chatW">
     <div class="msg msg-a">
@@ -307,9 +385,210 @@
         <button class="send" id="sendBtn" onclick="send()">Analyze →</button>
     </div>
 </div>
+</div><!-- /view-analyze -->
+
+<!-- View: Stock Picks -->
+<div class="view" id="view-picks">
+<div class="view-content">
+    <div class="view-title">Stock Picks 🎯</div>
+    <div class="view-sub">All recommended tickers across value chains, ranked by conviction.</div>
+    <div class="pick-filters" id="pickFilters"></div>
+    <div class="picks-grid" id="picksGrid"><div class="trend-empty">Loading stock picks...</div></div>
+</div>
+</div>
+
+<!-- View: Portfolio -->
+<div class="view" id="view-portfolio">
+<div class="view-content">
+    <div class="view-title">Portfolio 📊</div>
+    <div class="view-sub">Allocation across value chains and top holdings by conviction.</div>
+    <div class="port-stats" id="portStats"></div>
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:10px">Chain Allocation</div>
+    <div class="chain-bars" id="chainBars"></div>
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:10px">Top Holdings</div>
+    <div id="topHoldings"></div>
+</div>
+</div>
+
+<!-- View: Trending Trades -->
+<div class="view" id="view-trending">
+<div class="view-content">
+    <div class="view-title">Trending Trades 🔥</div>
+    <div class="view-sub">Recent calls with live P&L and active market signals.</div>
+    <div id="trendingContent"><div class="trend-empty">Loading trending trades...</div></div>
+</div>
+</div>
 
 <script>
 const API=location.origin+'/api';
+
+// ── Nav Menu & View Switching ──
+function toggleMenu(){document.getElementById('navDrop').classList.toggle('open')}
+document.addEventListener('click',e=>{if(!e.target.closest('.nav-left'))document.getElementById('navDrop').classList.remove('open')});
+
+function showView(id){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+id).classList.add('active');
+    document.querySelectorAll('.nav-item[data-view]').forEach(n=>{n.classList.toggle('active',n.dataset.view===id)});
+    document.getElementById('navDrop').classList.remove('open');
+    if(id==='picks')loadStockPicks();
+    if(id==='portfolio')loadPortfolio();
+    if(id==='trending')loadTrending();
+}
+
+// ── Stock Picks View ──
+let picksData=[];
+async function loadStockPicks(){
+    try{
+        const r=await fetch(`${API}/portfolio`);
+        const d=await r.json();
+        if(!d.success)return;
+        picksData=d.tickers||[];
+        // Build filter pills
+        const chains=[...new Set(picksData.map(t=>t.chain_name))];
+        document.getElementById('pickFilters').innerHTML=
+            `<div class="pick-filter active" onclick="filterPicks('all')">All (${picksData.length})</div>`+
+            `<div class="pick-filter" onclick="filterPicks('bullish')">BUY</div>`+
+            `<div class="pick-filter" onclick="filterPicks('bearish')">SHORT</div>`+
+            chains.map(c=>`<div class="pick-filter" onclick="filterPicks('chain','${c}')">${c}</div>`).join('');
+        renderPicks(picksData);
+    }catch(e){document.getElementById('picksGrid').innerHTML='<div class="trend-empty">Failed to load picks</div>'}
+}
+function filterPicks(type,val){
+    document.querySelectorAll('.pick-filter').forEach(f=>f.classList.remove('active'));
+    event.target.classList.add('active');
+    let filtered=picksData;
+    if(type==='bullish')filtered=picksData.filter(t=>t.direction==='bullish');
+    if(type==='bearish')filtered=picksData.filter(t=>t.direction==='bearish');
+    if(type==='chain')filtered=picksData.filter(t=>t.chain_name===val);
+    renderPicks(filtered);
+}
+function renderPicks(tickers){
+    const g=document.getElementById('picksGrid');
+    if(!tickers.length){g.innerHTML='<div class="trend-empty">No picks match this filter</div>';return}
+    g.innerHTML=tickers.slice(0,20).map(t=>{
+        const dir=t.direction==='bullish';
+        const action=dir?(t.conviction>.6?'BUY':'WATCH'):(t.conviction>.6?'SHORT':'AVOID');
+        const actCls=action==='BUY'?'buy':action==='SHORT'?'short':action==='WATCH'?'watch':'avoid';
+        const projSign=dir?1:-1;
+        const proj=((Math.exp(projSign*t.conviction*0.003*22)-1)*100);
+        return `<div class="pick-card" onclick="showView('analyze');pick('${(t.thesis||t.ticker).replace(/'/g,"\\'").substring(0,60)}')">
+            <div class="pick-top">
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span class="pick-ticker">${t.ticker}</span>
+                    <span class="tk-action ${actCls}" style="font-size:10px">${action}</span>
+                </div>
+                <span class="pick-price">${t.current_price?'$'+t.current_price.toFixed(2):''}</span>
+            </div>
+            <div class="pick-company">${t.company||''}</div>
+            <div class="pick-meta">
+                <span style="color:${proj>=0?'var(--gn)':'var(--rd)'};font-weight:700;font-size:12px">${proj>=0?'+':''}${proj.toFixed(1)}% 30d</span>
+                <span style="font-size:11px;color:var(--mt)">${(t.conviction*100).toFixed(0)}% conviction</span>
+                <span class="pick-chain">${t.chain_name||''}</span>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Portfolio View ──
+async function loadPortfolio(){
+    try{
+        const r=await fetch(`${API}/portfolio`);
+        const d=await r.json();
+        if(!d.success)return;
+        const tickers=d.tickers||[];
+        const byChain=d.by_chain||{};
+        const totalTickers=d.total_tickers||tickers.length;
+        const chainCount=d.chains_covered||Object.keys(byChain).length;
+        const avgConv=tickers.length?tickers.reduce((s,t)=>s+t.conviction,0)/tickers.length:0;
+
+        // Stats
+        document.getElementById('portStats').innerHTML=`
+            <div class="port-stat"><div class="port-stat-val">${totalTickers}</div><div class="port-stat-lbl">Total Tickers</div></div>
+            <div class="port-stat"><div class="port-stat-val">${chainCount}</div><div class="port-stat-lbl">Value Chains</div></div>
+            <div class="port-stat"><div class="port-stat-val">${(avgConv*100).toFixed(0)}%</div><div class="port-stat-lbl">Avg Conviction</div></div>`;
+
+        // Chain bars
+        const maxCount=Math.max(...Object.values(byChain).map(c=>c.ticker_count||0),1);
+        document.getElementById('chainBars').innerHTML=Object.entries(byChain).map(([id,c])=>{
+            const pct=((c.ticker_count||0)/maxCount*100);
+            return `<div class="chain-bar-row">
+                <span class="chain-bar-name" style="color:${c.color||'var(--tx)'}">${c.name}</span>
+                <div class="chain-bar-track"><div class="chain-bar-fill" style="width:${pct}%;background:${c.color||'var(--ac)'}">${c.ticker_count}</div></div>
+            </div>`;
+        }).join('');
+
+        // Top holdings
+        document.getElementById('topHoldings').innerHTML=tickers.slice(0,10).map(t=>{
+            const dir=t.direction==='bullish';
+            return `<div class="trend-card" onclick="showView('analyze');pick('${t.ticker}')">
+                <span class="trend-ticker">${t.ticker}</span>
+                <div class="trend-body">
+                    <div class="trend-headline">${t.company||''}</div>
+                    <div class="trend-meta">${t.chain_name} · ${t.layer} · ${(t.conviction*100).toFixed(0)}% conviction</div>
+                </div>
+                <span class="trend-pnl" style="color:${dir?'var(--gn)':'var(--rd)'}">${t.current_price?'$'+t.current_price.toFixed(0):''}</span>
+            </div>`;
+        }).join('');
+    }catch(e){}
+}
+
+// ── Trending Trades View ──
+async function loadTrending(){
+    try{
+        const [scRes,sigRes]=await Promise.all([
+            fetch(`${API}/scorecard?days=14&limit=10`),
+            fetch(`${API}/signals?hours=72&limit=5`)
+        ]);
+        const sc=await scRes.json();
+        const sig=await sigRes.json();
+        let h='';
+
+        // Recent calls with P&L
+        if(sc.success&&sc.recommendations?.length){
+            const s=sc.stats;
+            h+=`<div class="trend-section">
+                <div class="trend-section-title">Recent Calls — ${s.win_rate}% win rate · ${s.avg_pnl>=0?'+':''}${s.avg_pnl}% avg</div>`;
+            sc.recommendations.forEach(r=>{
+                const pnlClr=r.pnl_pct>=0?'var(--gn)':'var(--rd)';
+                const actCls=r.action==='SHORT'||r.action==='SELL'?'short':'buy';
+                h+=`<div class="trend-card" onclick="showView('analyze');pick('${(r.headline||'').replace(/'/g,"\\'").substring(0,70)}')">
+                    <span class="trend-ticker">${r.ticker}</span>
+                    <span class="sc-action ${actCls}" style="margin-right:4px">${r.action}</span>
+                    <div class="trend-body">
+                        <div class="trend-headline">$${r.entry_price.toFixed(0)} → $${r.current_price.toFixed(0)}</div>
+                        <div class="trend-meta">${_ago(r.created_at)} · ${r.chain_name||''}</div>
+                    </div>
+                    <span class="trend-pnl" style="color:${pnlClr}">${r.pnl_pct>=0?'+':''}${r.pnl_pct}%</span>
+                    <span style="font-size:10px">${r.correct?'✅':'❌'}</span>
+                </div>`;
+            });
+            h+='</div>';
+        }
+
+        // Active signals
+        if(sig.success&&sig.signals?.length){
+            h+=`<div class="trend-section"><div class="trend-section-title">Active Catalysts (${sig.count})</div>`;
+            sig.signals.forEach(s=>{
+                const src=s.source==='wsj'?'WSJ':s.source==='newsapi'?'News':'SEC';
+                const picks=(s.top_picks||[]).slice(0,2).map(t=>`<strong style="color:var(--ac)">${t.ticker}</strong>`).join(' ');
+                h+=`<div class="trend-card" onclick="showView('analyze');pick('${(s.title||'').replace(/'/g,"\\'").substring(0,70)}')">
+                    <span style="font-size:10px;color:var(--mt);min-width:30px">${src}</span>
+                    <div class="trend-body">
+                        <div class="trend-headline">${s.title}</div>
+                        <div class="trend-meta">${ago(s.timestamp)}</div>
+                    </div>
+                    <span style="font-size:11px">${picks}</span>
+                </div>`;
+            });
+            h+='</div>';
+        }
+
+        if(!h)h='<div class="trend-empty">No trending trades yet. Run some analyses first!</div>';
+        document.getElementById('trendingContent').innerHTML=h;
+    }catch(e){document.getElementById('trendingContent').innerHTML='<div class="trend-empty">Failed to load trending data</div>'}
+}
+
 const CATS=[
     {i:'🖥️',cat:'Technology',t:'What if NVIDIA beats earnings by 20%?'},
     {i:'📈',cat:'Markets',t:'Fed signals rate cut at next FOMC meeting'},
