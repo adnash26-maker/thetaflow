@@ -448,6 +448,127 @@ def get_scorecard():
     })
 
 
+@app.route("/api/scored-picks", methods=["GET"])
+def get_scored_picks():
+    """Get AI-scored stock picks across all chains with ThetaFlow Score."""
+    from financial_data import get_full_financials
+
+    # 1. Gather all unique tickers from chains + recommendation history
+    all_tickers = {}
+    for chain in ALL_CHAINS.values():
+        for node in chain.nodes:
+            for t in node.tickers:
+                tk = t["ticker"]
+                if tk not in all_tickers:
+                    all_tickers[tk] = {
+                        "ticker": tk, "company": t["company"],
+                        "chain_name": chain.name, "layer": node.layer,
+                        "exposure": t.get("exposure", "medium"),
+                        "sensitivity": node.sensitivity,
+                    }
+
+    # 2. Get recommendation frequency from history
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""
+        SELECT ticker, COUNT(*) as freq, AVG(conviction) as avg_conv,
+               MAX(created_at) as last_seen
+        FROM recommendation_history GROUP BY ticker
+    """).fetchall()
+    conn.close()
+    rec_freq = {r["ticker"]: dict(r) for r in rows}
+
+    # 3. Enrich top candidates with live prices
+    candidates = sorted(all_tickers.values(),
+                       key=lambda t: rec_freq.get(t["ticker"], {}).get("avg_conv", t["sensitivity"]),
+                       reverse=True)[:30]
+
+    enriched = []
+    for c in candidates:
+        fin = get_full_financials(c["ticker"])
+        if not fin or not fin.get("price"):
+            continue
+        c["current_price"] = fin["price"]
+        c["change_pct"] = fin.get("change_pct", 0)
+        c["market_cap"] = fin.get("market_cap_str", "")
+        c["pe_forward"] = fin.get("pe_forward")
+        c["distance_from_high"] = fin.get("distance_from_high_pct")
+        c["beta"] = fin.get("beta")
+        rf = rec_freq.get(c["ticker"], {})
+        c["rec_frequency"] = rf.get("freq", 0)
+        c["avg_conviction"] = rf.get("avg_conv", c["sensitivity"])
+        enriched.append(c)
+        time.sleep(0.2)
+        if len(enriched) >= 20:
+            break
+
+    # 4. Send to Claude for AI scoring
+    if analyst.available and enriched:
+        try:
+            ticker_list = "\n".join([
+                f"- {t['ticker']} ({t['company']}): ${t['current_price']:.0f}, "
+                f"chain={t['chain_name']}, P/E={t.get('pe_forward') or 'N/A'}, "
+                f"from_high={t.get('distance_from_high') or 'N/A'}%, "
+                f"rec_freq={t['rec_frequency']}, avg_conv={t['avg_conviction']:.0%}"
+                for t in enriched
+            ])
+
+            response = analyst.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=3000,
+                messages=[{"role": "user", "content": f"""Score these stocks on a 1-100 ThetaFlow Score based on: catalyst exposure, valuation attractiveness, momentum, and risk/reward asymmetry. Consider current market conditions.
+
+STOCKS:
+{ticker_list}
+
+Return JSON array. For each stock:
+{{"ticker":"SYM","score":85,"grade":"A","action":"BUY","rationale":"One sentence why."}}
+
+Score meaning: 90-100=Strong Buy, 75-89=Buy, 60-74=Watch, 40-59=Neutral, below 40=Avoid.
+Grade: A/B/C/D/F.
+Sort by score descending. Return ONLY the JSON array, no other text."""}]
+            )
+
+            text = response.content[0].text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+
+            scores = json.loads(text)
+            score_map = {s["ticker"]: s for s in scores if isinstance(s, dict)}
+
+            for t in enriched:
+                sc = score_map.get(t["ticker"], {})
+                t["score"] = sc.get("score", 50)
+                t["grade"] = sc.get("grade", "C")
+                t["action"] = sc.get("action", "WATCH")
+                t["rationale"] = sc.get("rationale", "")
+
+        except Exception as e:
+            logger.error(f"AI scoring failed: {e}")
+            for t in enriched:
+                t["score"] = round(t["avg_conviction"] * 100)
+                t["grade"] = "A" if t["score"] >= 75 else "B" if t["score"] >= 60 else "C"
+                t["action"] = "BUY" if t["score"] >= 75 else "WATCH"
+                t["rationale"] = ""
+    else:
+        for t in enriched:
+            t["score"] = round(t["avg_conviction"] * 100)
+            t["grade"] = "A" if t["score"] >= 75 else "B" if t["score"] >= 60 else "C"
+            t["action"] = "BUY" if t["score"] >= 75 else "WATCH"
+            t["rationale"] = ""
+
+    enriched.sort(key=lambda t: t.get("score", 0), reverse=True)
+
+    return jsonify({
+        "success": True,
+        "picks": enriched,
+        "total": len(enriched),
+        "ai_scored": analyst.available,
+    })
+
+
 def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
     """Enrich Claude's dynamic chain result with live financial data and charts."""
     from financial_data import get_full_financials, get_ticker_chart_data

@@ -391,7 +391,7 @@
 <div class="view" id="view-picks">
 <div class="view-content">
     <div class="view-title">Stock Picks 🎯</div>
-    <div class="view-sub">All recommended tickers across value chains, ranked by conviction.</div>
+    <div class="view-sub">AI-scored picks across all value chains. Score factors: catalyst exposure, valuation, momentum, risk/reward.</div>
     <div class="pick-filters" id="pickFilters"></div>
     <div class="picks-grid" id="picksGrid"><div class="trend-empty">Loading stock picks...</div></div>
 </div>
@@ -440,16 +440,16 @@ function showView(id){
 let picksData=[];
 async function loadStockPicks(){
     try{
-        const r=await fetch(`${API}/portfolio`);
+        document.getElementById('picksGrid').innerHTML='<div class="trend-empty">Scoring stocks with AI... this takes ~15 seconds</div>';
+        const r=await fetch(`${API}/scored-picks`);
         const d=await r.json();
         if(!d.success)return;
-        picksData=d.tickers||[];
-        // Build filter pills
+        picksData=d.picks||[];
         const chains=[...new Set(picksData.map(t=>t.chain_name))];
         document.getElementById('pickFilters').innerHTML=
             `<div class="pick-filter active" onclick="filterPicks('all')">All (${picksData.length})</div>`+
-            `<div class="pick-filter" onclick="filterPicks('bullish')">BUY</div>`+
-            `<div class="pick-filter" onclick="filterPicks('bearish')">SHORT</div>`+
+            `<div class="pick-filter" onclick="filterPicks('A')">A Grade</div>`+
+            `<div class="pick-filter" onclick="filterPicks('B')">B Grade</div>`+
             chains.map(c=>`<div class="pick-filter" onclick="filterPicks('chain','${c}')">${c}</div>`).join('');
         renderPicks(picksData);
     }catch(e){document.getElementById('picksGrid').innerHTML='<div class="trend-empty">Failed to load picks</div>'}
@@ -458,33 +458,39 @@ function filterPicks(type,val){
     document.querySelectorAll('.pick-filter').forEach(f=>f.classList.remove('active'));
     event.target.classList.add('active');
     let filtered=picksData;
-    if(type==='bullish')filtered=picksData.filter(t=>t.direction==='bullish');
-    if(type==='bearish')filtered=picksData.filter(t=>t.direction==='bearish');
+    if(type==='A')filtered=picksData.filter(t=>t.grade==='A');
+    if(type==='B')filtered=picksData.filter(t=>t.grade==='B');
     if(type==='chain')filtered=picksData.filter(t=>t.chain_name===val);
     renderPicks(filtered);
 }
 function renderPicks(tickers){
     const g=document.getElementById('picksGrid');
     if(!tickers.length){g.innerHTML='<div class="trend-empty">No picks match this filter</div>';return}
-    g.innerHTML=tickers.slice(0,20).map(t=>{
-        const dir=t.direction==='bullish';
-        const action=dir?(t.conviction>.6?'BUY':'WATCH'):(t.conviction>.6?'SHORT':'AVOID');
+    g.innerHTML=tickers.map(t=>{
+        const action=t.action||'WATCH';
         const actCls=action==='BUY'?'buy':action==='SHORT'?'short':action==='WATCH'?'watch':'avoid';
-        const projSign=dir?1:-1;
-        const proj=((Math.exp(projSign*t.conviction*0.003*22)-1)*100);
-        return `<div class="pick-card" onclick="showView('analyze');pick('${(t.thesis||t.ticker).replace(/'/g,"\\'").substring(0,60)}')">
+        const score=t.score||50;
+        const grade=t.grade||'C';
+        const gradeClr=grade==='A'?'var(--gn)':grade==='B'?'var(--cy)':grade==='C'?'var(--yl)':'var(--rd)';
+        const scoreBar=Math.min(score,100);
+        return `<div class="pick-card" onclick="showView('analyze');pick('${t.ticker} stock analysis')">
             <div class="pick-top">
                 <div style="display:flex;align-items:center;gap:8px">
                     <span class="pick-ticker">${t.ticker}</span>
                     <span class="tk-action ${actCls}" style="font-size:10px">${action}</span>
+                    <span style="font-size:12px;font-weight:800;color:${gradeClr}">${grade}</span>
                 </div>
-                <span class="pick-price">${t.current_price?'$'+t.current_price.toFixed(2):''}</span>
+                <div style="text-align:right">
+                    <span class="pick-price">${t.current_price?'$'+t.current_price.toFixed(0):''}</span>
+                    <div style="font-size:20px;font-weight:900;color:${gradeClr}">${score}</div>
+                </div>
             </div>
             <div class="pick-company">${t.company||''}</div>
-            <div class="pick-meta">
-                <span style="color:${proj>=0?'var(--gn)':'var(--rd)'};font-weight:700;font-size:12px">${proj>=0?'+':''}${proj.toFixed(1)}% 30d</span>
-                <span style="font-size:11px;color:var(--mt)">${(t.conviction*100).toFixed(0)}% conviction</span>
+            <div style="height:4px;background:var(--bg);border-radius:2px;margin:6px 0;overflow:hidden"><div style="height:100%;width:${scoreBar}%;background:${gradeClr};border-radius:2px"></div></div>
+            ${t.rationale?`<div style="font-size:11px;color:var(--mt);line-height:1.4">${t.rationale}</div>`:''}
+            <div class="pick-meta" style="margin-top:6px">
                 <span class="pick-chain">${t.chain_name||''}</span>
+                <span style="font-size:10px;color:var(--mt)">${t.layer||''}</span>
             </div>
         </div>`;
     }).join('');
