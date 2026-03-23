@@ -52,6 +52,9 @@ AI_INFRASTRUCTURE = ValueChain(
         "nvidia earnings", "cloud spending", "ai investment",
         "data center construction", "hyperscaler", "ai chip",
         "machine learning infrastructure", "training compute",
+        "chip fab", "semiconductor", "foundry", "wafer",
+        "artificial intelligence", "gpu shortage", "inference",
+        "accelerator", "supercomputer", "compute capacity",
     ],
     theme_color="#8b5cf6",
     nodes=[
@@ -391,19 +394,52 @@ ALL_CHAINS: Dict[str, ValueChain] = {
 
 def find_chains_for_event(headline: str) -> List[Dict]:
     """Match a news headline to relevant value chains.
-    Returns list of {chain_id, chain_name, matched_keywords, relevance_score}."""
+    Uses three strategies:
+    1. Exact phrase match against catalyst_keywords (highest confidence)
+    2. Individual word overlap with catalyst_keywords
+    3. Ticker/company name mention in headline
+    """
     headline_lower = headline.lower()
+    headline_words = set(headline_lower.split())
     matches = []
 
     for chain_id, chain in ALL_CHAINS.items():
         matched_keywords = []
+        score = 0
+
+        # Strategy 1: Exact phrase matches (strongest signal)
         for kw in chain.catalyst_keywords:
             if kw in headline_lower:
                 matched_keywords.append(kw)
+                score += 0.4
+
+        # Strategy 2: Individual word overlap with keywords
+        kw_words = set()
+        for kw in chain.catalyst_keywords:
+            for w in kw.split():
+                if len(w) >= 4:  # Skip short words like "ai", "ev"
+                    kw_words.add(w)
+        word_overlap = headline_words & kw_words
+        if word_overlap:
+            matched_keywords.extend([f"word:{w}" for w in list(word_overlap)[:3]])
+            score += len(word_overlap) * 0.15
+
+        # Strategy 3: Ticker or company name mentioned in headline
+        for node in chain.nodes:
+            for t in node.tickers:
+                ticker = t["ticker"]
+                company = t["company"].lower()
+                # Check ticker (case-sensitive for accuracy)
+                if ticker in headline or ticker in headline.upper():
+                    matched_keywords.append(f"ticker:{ticker}")
+                    score += 0.5  # Direct ticker mention = high confidence
+                # Check company name
+                elif company.split()[0] in headline_lower and len(company.split()[0]) >= 4:
+                    matched_keywords.append(f"company:{t['company']}")
+                    score += 0.3
 
         if matched_keywords:
-            # More keyword matches = higher relevance
-            relevance = min(len(matched_keywords) / 3, 1.0)
+            relevance = min(score, 1.0)
             matches.append({
                 "chain_id": chain_id,
                 "chain_name": chain.name,
