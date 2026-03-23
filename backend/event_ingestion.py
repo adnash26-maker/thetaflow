@@ -138,9 +138,27 @@ class EventDatabase:
                 subscriber_count INTEGER
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS recommendation_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticker TEXT NOT NULL,
+                company TEXT,
+                action TEXT,
+                direction TEXT,
+                conviction REAL,
+                entry_price REAL,
+                target_price REAL,
+                headline TEXT,
+                order_type INTEGER DEFAULT 1,
+                chain_name TEXT,
+                risk_reward TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_events_source ON events(source)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_prices_ticker ON ticker_prices(ticker)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_recs_created ON recommendation_history(created_at)")
         conn.commit()
         conn.close()
 

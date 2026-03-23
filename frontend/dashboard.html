@@ -111,7 +111,23 @@
         .sugg-pill{padding:8px 14px;border-radius:16px;border:1px solid var(--bd);background:var(--s1);cursor:pointer;font-size:12px;transition:all .2s;max-width:100%}
         .sugg-pill:hover{border-color:var(--ac);transform:translateY(-1px)}
 
-        /* (Signal card CSS removed — pills ARE the feed now) */
+        /* Scorecard */
+        .scorecard{margin-bottom:14px}
+        .sc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+        .sc-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mt)}
+        .sc-stats{display:flex;gap:12px;font-size:11px}
+        .sc-stat{display:flex;align-items:center;gap:4px}
+        .sc-stat strong{font-weight:800}
+        .sc-list{display:flex;flex-direction:column;gap:4px}
+        .sc-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--s2);border-radius:6px;font-size:12px;border:1px solid var(--bd);cursor:pointer;transition:border-color .2s}
+        .sc-row:hover{border-color:var(--ac)}
+        .sc-ticker{font-weight:800;color:var(--ac);width:48px}
+        .sc-action{font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px}
+        .sc-action.buy{background:#10b98120;color:var(--gn)}
+        .sc-action.short{background:#ef444420;color:var(--rd)}
+        .sc-entry{color:var(--mt);flex:1;font-size:11px}
+        .sc-pnl{font-weight:800;min-width:50px;text-align:right}
+        .sc-check{font-size:10px}
 
         /* Intro features */
         .intro-features{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
@@ -170,6 +186,7 @@
                     <div class="intro-feat-desc">BUY / SHORT / WATCH with entry logic and risk/reward</div>
                 </div>
             </div>
+            <div class="scorecard" id="scorecard" style="display:none"></div>
             <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:6px" id="sugg-label">Try a scenario</div>
             <div class="sugg" id="sugg"></div>
         </div>
@@ -213,6 +230,42 @@ document.getElementById('sugg').innerHTML=CATS.map(s=>`<div class="sugg-pill" on
         }
     }catch(e){console.debug('top-headlines not available, using static')}
 })();
+
+// Load scorecard of past calls
+(async()=>{
+    try{
+        const r=await fetch(`${API}/scorecard?days=14&limit=5`);
+        const d=await r.json();
+        if(!d.success||!d.recommendations?.length)return;
+        const el=document.getElementById('scorecard');
+        const s=d.stats;
+        let h=`<div class="sc-header">
+            <span class="sc-title">Recent Calls — Track Record</span>
+            <div class="sc-stats">
+                <span class="sc-stat"><strong style="color:${s.win_rate>=50?'var(--gn)':'var(--rd)'}">${s.win_rate}%</strong> win rate</span>
+                <span class="sc-stat"><strong style="color:${s.avg_pnl>=0?'var(--gn)':'var(--rd)'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl}%</strong> avg return</span>
+                <span class="sc-stat">${s.total} calls</span>
+            </div>
+        </div><div class="sc-list">`;
+        d.recommendations.forEach(r=>{
+            const actCls=r.action==='SHORT'||r.action==='SELL'?'short':'buy';
+            const pnlClr=r.pnl_pct>=0?'var(--gn)':'var(--rd)';
+            const check=r.correct?'✅':'❌';
+            const ago=_ago(r.created_at);
+            h+=`<div class="sc-row" onclick="pick('${(r.headline||'').replace(/'/g,"\\'").substring(0,70)}')">
+                <span class="sc-ticker">${r.ticker}</span>
+                <span class="sc-action ${actCls}">${r.action}</span>
+                <span class="sc-entry">$${r.entry_price.toFixed(0)} → $${r.current_price.toFixed(0)} · ${ago}</span>
+                <span class="sc-pnl" style="color:${pnlClr}">${r.pnl_pct>=0?'+':''}${r.pnl_pct}%</span>
+                <span class="sc-check">${check}</span>
+            </div>`;
+        });
+        h+='</div>';
+        el.innerHTML=h;
+        el.style.display='block';
+    }catch(e){}
+})();
+function _ago(ts){if(!ts)return'';const d=(Date.now()-new Date(ts).getTime())/1000;if(d<3600)return`${Math.floor(d/60)}m ago`;if(d<86400)return`${Math.floor(d/3600)}h ago`;return`${Math.floor(d/86400)}d ago`}
 
 function pick(t){document.getElementById('inp').value=t;send()}
 function scrollEnd(){const c=document.getElementById('chat');setTimeout(()=>c.scrollTop=c.scrollHeight,50)}

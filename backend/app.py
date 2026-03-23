@@ -297,7 +297,114 @@ def analyze_event_endpoint():
         _add_chart_data_to_picks(analysis.get("top_picks", []))
         analysis["dynamic_chains"] = False
 
+    # Save top picks to recommendation history for scorecard tracking
+    _save_recommendations(analysis)
+
     return jsonify({"success": True, **analysis})
+
+
+def _save_recommendations(analysis: dict):
+    """Save top picks to DB for performance tracking."""
+    try:
+        headline = analysis.get("headline", "")
+        conn = sqlite3.connect(DB_PATH)
+        for pick in analysis.get("top_picks", [])[:5]:
+            if not pick.get("ticker") or not pick.get("current_price"):
+                continue
+            # Compute target price
+            proj_sign = 1 if pick.get("direction") == "bullish" else -1
+            conv = pick.get("conviction", 0.5)
+            import math
+            target = pick["current_price"] * math.exp(proj_sign * conv * 0.003 * 22)
+            conn.execute("""
+                INSERT INTO recommendation_history
+                (ticker, company, action, direction, conviction, entry_price, target_price,
+                 headline, order_type, chain_name, risk_reward)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pick["ticker"], pick.get("company", ""),
+                pick.get("action", "BUY"), pick.get("direction", "bullish"),
+                conv, pick["current_price"], round(target, 2),
+                headline[:200], pick.get("order", 1),
+                pick.get("chain_name", ""), pick.get("risk_reward", ""),
+            ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.debug(f"Failed to save recommendations: {e}")
+
+
+@app.route("/api/scorecard", methods=["GET"])
+def get_scorecard():
+    """Get performance scorecard of past recommendations with live P&L."""
+    from financial_data import _get_basic_quote
+
+    days = request.args.get("days", 14, type=int)
+    limit = request.args.get("limit", 10, type=int)
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+
+    # Get unique recent recommendations (dedupe by ticker, keep latest)
+    rows = conn.execute("""
+        SELECT * FROM recommendation_history
+        WHERE created_at > ? ORDER BY created_at DESC LIMIT ?
+    """, (cutoff, limit * 3)).fetchall()
+    conn.close()
+
+    seen = set()
+    recs = []
+    for row in rows:
+        r = dict(row)
+        if r["ticker"] in seen:
+            continue
+        seen.add(r["ticker"])
+
+        # Fetch current price
+        quote = _get_basic_quote(r["ticker"])
+        if quote and quote.get("price"):
+            current = quote["price"]
+            entry = r["entry_price"]
+            if r["direction"] == "bearish":
+                pnl_pct = round((entry - current) / entry * 100, 1)
+            else:
+                pnl_pct = round((current - entry) / entry * 100, 1)
+
+            recs.append({
+                "ticker": r["ticker"],
+                "company": r["company"],
+                "action": r["action"],
+                "direction": r["direction"],
+                "conviction": r["conviction"],
+                "entry_price": entry,
+                "current_price": current,
+                "target_price": r["target_price"],
+                "pnl_pct": pnl_pct,
+                "correct": pnl_pct > 0,
+                "headline": r["headline"],
+                "order_type": r["order_type"],
+                "chain_name": r["chain_name"],
+                "created_at": r["created_at"],
+            })
+            time.sleep(0.2)
+
+        if len(recs) >= limit:
+            break
+
+    wins = sum(1 for r in recs if r["correct"])
+    total = len(recs)
+
+    return jsonify({
+        "success": True,
+        "recommendations": recs,
+        "stats": {
+            "total": total,
+            "wins": wins,
+            "win_rate": round(wins / total * 100) if total > 0 else 0,
+            "avg_pnl": round(sum(r["pnl_pct"] for r in recs) / total, 1) if total > 0 else 0,
+        }
+    })
 
 
 def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
