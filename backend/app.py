@@ -519,6 +519,8 @@ def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
         "summary": ai_result.get("summary", ""),
         "risk_factors": ai_result.get("risk_factors", []),
         "obvious_play": ai_result.get("obvious_play"),
+        "historical_precedents": ai_result.get("historical_precedents", []),
+        "active_catalysts": ai_result.get("active_catalysts", []),
         "contrarian_view": ai_result.get("contrarian_view", ""),
         "ai_time_horizon": ai_result.get("time_horizon", ""),
         "analyzed_at": datetime.utcnow().isoformat(),

@@ -139,14 +139,17 @@ IMPORTANT:
         if not self.available:
             return None
 
-        prompt = f"""You are a senior PM at a multi-strategy hedge fund. Your edge is finding the second and third-order trades that the market misses. Everyone knows the obvious play — your job is to find what's NOT obvious.
+        prompt = f"""You are a senior PM at a multi-strategy hedge fund writing an actionable trade memo. Your analysis must contain three things a human cannot compute in their head: (1) historical precedent with actual outcomes, (2) precise earnings math, (3) cross-catalyst compounding.
 
 EVENT: {headline}
 
-Think step by step:
-1. What is the OBVIOUS first-order reaction? (Acknowledge it briefly — the market prices this in minutes.)
-2. What are the HIDDEN second-order effects? (Suppliers, competitors gaining share, downstream disruptions, adjacent sectors, companies losing/gaining pricing power.)
-3. What are the THIRD-ORDER trades? (The picks no one is talking about yet that will move in weeks, not hours.)
+ANALYSIS FRAMEWORK — work through ALL of these:
+
+A. HISTORICAL PRECEDENT: Identify 1-3 analogous past events (be specific: dates, what happened). For each, state what actually happened to the affected stocks over 10-30 days. Example: "In Jan 2024 (737 MAX door plug), SPR fell 18% in 10 days, EADSY +7% in 21 days, HEICO +4% in 14 days."
+
+B. EARNINGS MATH: For each top pick, quantify the dollar impact. Use real numbers: delivery rates, ASPs, segment revenue %, margin impact. Example: "MAX halt removes ~38 deliveries/mo × $110M ASP = $4.2B/qtr revenue. At 65% gross margin, that's $2.7B EBIT impact. Current price implies $X EPS; revised = $Y; fair value = $Z."
+
+C. CROSS-CATALYST OVERLAY: What OTHER active catalysts compound with this one? Tariffs, rate expectations, sector rotation, earnings season timing, options expiry, index rebalancing — where do multiple forces stack on the same ticker?
 
 Produce your analysis in this exact JSON format:
 
@@ -163,8 +166,20 @@ Produce your analysis in this exact JSON format:
     "ticker": "SYMBOL",
     "company": "Company Name",
     "direction": "bullish or bearish",
-    "summary": "One sentence. Everyone already knows this. Market prices it in minutes."
+    "summary": "One sentence. Market prices this in minutes."
   }},
+  "historical_precedents": [
+    {{
+      "event": "Brief description of analogous past event",
+      "date": "Month Year",
+      "outcomes": [
+        {{"ticker": "SYM", "move": "+7.2%", "period": "21 days"}}
+      ]
+    }}
+  ],
+  "active_catalysts": [
+    "Other macro/sector force compounding with this event — be specific"
+  ],
   "top_picks": [
     {{
       "ticker": "SYMBOL",
@@ -177,7 +192,9 @@ Produce your analysis in this exact JSON format:
       "chain_name": "Which chain this belongs to",
       "chain_id": "matching_chain_id",
       "exposure": "critical",
-      "thesis": "2-3 sentences: (1) the NON-OBVIOUS connection most investors miss, (2) specific revenue/earnings impact with numbers if possible, (3) entry logic — why NOW at this price.",
+      "thesis": "2-3 sentences with SPECIFIC NUMBERS: revenue impact ($Xm), margin impact (X bps), earnings revision (from $X to $Y), and what the historical precedent showed.",
+      "earnings_impact": "Quantified: e.g. '+$340M revenue (+8% YoY), +$0.45 EPS revision, implies 15% upside to $X target'",
+      "precedent_move": "e.g. '+6.2% over 21 days after Jan 2024 MAX grounding'",
       "time_horizon": "short_term",
       "impact_score": 85.0,
       "risk_reward": "3:1"
@@ -185,23 +202,25 @@ Produce your analysis in this exact JSON format:
   ],
   "all_tickers": [
   ],
-  "summary": "2-3 sentences focused on the HIDDEN opportunity. Don't waste words on what's obvious. Lead with what the market is missing and why it matters.",
-  "risk_factors": ["Specific risk 1", "Specific risk 2", "Specific risk 3"],
-  "contrarian_view": "One sentence — the strongest argument against these trades.",
-  "time_horizon": "Overall time horizon for the non-obvious effects to play out"
+  "summary": "2-3 sentences. Lead with the quantitative insight — the historical pattern, the earnings math, or the cross-catalyst compounding that makes this trade asymmetric.",
+  "risk_factors": ["Specific risk with numbers where possible"],
+  "contrarian_view": "The strongest quantitative argument against — what if the precedent doesn't repeat?",
+  "time_horizon": "Overall time horizon with reasoning"
 }}
 
 CRITICAL RULES:
-- top_picks should be the NON-OBVIOUS plays. Do NOT put the headline company first unless it's genuinely mispriced.
-- order: 2 = second-order effect, 3 = third-order effect. At least 3 of top_picks must be order 2 or 3.
-- The edge is in the thesis: explain a connection most investors haven't made yet. "NVDA benefits from AI" is worthless. "ANET captures 15% of every new GPU cluster buildout through 400G switches" is edge.
+- EVERY thesis must contain specific dollar amounts, percentages, or historical data points. "Benefits from increased demand" is BANNED. "$340M incremental revenue from 15% market share shift at 42% gross margin" is required.
+- historical_precedents must reference REAL past events with approximate real outcomes. Don't fabricate — if you're uncertain of exact numbers, give reasonable estimates and note they're approximate.
+- active_catalysts should list 2-4 other forces currently in play that compound with this event.
+- earnings_impact per ticker must quantify: revenue delta, EPS revision, or valuation gap.
+- precedent_move per ticker must reference what happened in the analogous event.
+- top_picks should be NON-OBVIOUS plays. The headline company goes in obvious_play.
+- order: 2 = second-order, 3 = third-order. At least 3 must be order 2 or 3.
 - Use ONLY real US-listed tickers (NYSE/NASDAQ).
-- Include 5-8 tickers in top_picks (prioritize non-obvious), 8-15 in all_tickers.
+- Include 5-8 in top_picks, 8-15 in all_tickers.
 - action: "BUY", "SHORT", "WATCH", or "AVOID".
 - risk_reward: "3:1", "5:1", etc.
-- time_horizon per ticker: "immediate", "short_term", "medium_term", "long_term".
-- theme_color: hex color matching the sector theme.
-- If the event is about a specific company, acknowledge it in obvious_play, then focus top_picks on the hidden plays around it."""
+- theme_color: hex color matching the sector."""
 
         try:
             response = self.client.messages.create(

@@ -40,9 +40,26 @@
 
         /* Hidden Edge Header */
         .edge-header{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--cy);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+        .section-hdr{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
         .order-badge{font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px;letter-spacing:.3px}
         .order-badge.o2{background:#06b6d420;color:var(--cy)}
         .order-badge.o3{background:#8b5cf620;color:var(--pu)}
+
+        /* Precedent Box */
+        .precedent-box{background:var(--s2);border-radius:8px;padding:12px 14px;margin-bottom:14px;border:1px solid var(--bd);border-left:3px solid var(--cy)}
+        .prec-event{font-size:12px;font-weight:600;margin-bottom:6px}
+        .prec-date{color:var(--mt);font-weight:400}
+        .prec-outcomes{display:flex;flex-wrap:wrap;gap:6px}
+        .prec-outcome{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg);display:flex;align-items:center;gap:4px}
+
+        /* Cross Catalysts */
+        .catalysts-box{background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:14px;border:1px solid var(--bd);border-left:3px solid var(--pu)}
+        .catalyst-item{font-size:12px;color:var(--mt);padding:2px 0;line-height:1.5}
+        .catalyst-item::before{content:'⚡';margin-right:6px}
+
+        /* Earnings Impact in ticker card */
+        .tk-earnings{padding:0 16px 10px;font-size:11px;font-family:monospace;color:var(--cy);background:var(--bg);margin:0 16px 8px;border-radius:6px;padding:8px 10px;line-height:1.6}
+        .tk-precedent{padding:0 16px 10px;font-size:11px;color:var(--pu)}
 
         /* Chain Flow */
         .chain-flow{display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap}
@@ -126,8 +143,10 @@
         .sc-action.buy{background:#10b98120;color:var(--gn)}
         .sc-action.short{background:#ef444420;color:var(--rd)}
         .sc-entry{color:var(--mt);flex:1;font-size:11px}
-        .sc-pnl{font-weight:800;min-width:50px;text-align:right}
+        .sc-pnl{font-weight:800;min-width:55px;text-align:right;font-family:monospace}
         .sc-check{font-size:10px}
+        .sc-bar{height:3px;border-radius:2px;margin-top:4px}
+        .sc-headline{font-size:10px;color:var(--mt);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
         /* Intro features */
         .intro-features{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
@@ -251,11 +270,19 @@ document.getElementById('sugg').innerHTML=CATS.map(s=>`<div class="sugg-pill" on
             const actCls=r.action==='SHORT'||r.action==='SELL'?'short':'buy';
             const pnlClr=r.pnl_pct>=0?'var(--gn)':'var(--rd)';
             const check=r.correct?'✅':'❌';
-            const ago=_ago(r.created_at);
+            const tAgo=_ago(r.created_at);
+            const pnlWidth=Math.min(Math.abs(r.pnl_pct)*10,100);
+            const headline=(r.headline||'').substring(0,50);
             h+=`<div class="sc-row" onclick="pick('${(r.headline||'').replace(/'/g,"\\'").substring(0,70)}')">
                 <span class="sc-ticker">${r.ticker}</span>
                 <span class="sc-action ${actCls}">${r.action}</span>
-                <span class="sc-entry">$${r.entry_price.toFixed(0)} → $${r.current_price.toFixed(0)} · ${ago}</span>
+                <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px">
+                        <span class="sc-entry">$${r.entry_price.toFixed(0)} → $${r.current_price.toFixed(0)}</span>
+                        <span style="font-size:10px;color:var(--mt)">${tAgo}</span>
+                    </div>
+                    <div class="sc-bar" style="width:${pnlWidth}%;background:${pnlClr}"></div>
+                </div>
                 <span class="sc-pnl" style="color:${pnlClr}">${r.pnl_pct>=0?'+':''}${r.pnl_pct}%</span>
                 <span class="sc-check">${check}</span>
             </div>`;
@@ -319,8 +346,30 @@ function renderAnalysis(d){
     // Summary — focused on what the market is missing
     if(d.summary) h+=`<p style="font-size:14px;margin-bottom:14px;line-height:1.7">${d.summary}</p>`;
 
+    // Historical precedents
+    if(d.historical_precedents?.length){
+        h+=`<div class="section-hdr" style="color:var(--cy)">📜 Historical Precedent</div>`;
+        d.historical_precedents.forEach(p=>{
+            h+=`<div class="precedent-box">
+                <div class="prec-event">${p.event} <span class="prec-date">· ${p.date||''}</span></div>
+                <div class="prec-outcomes">${(p.outcomes||[]).map(o=>{
+                    const clr=o.move?.startsWith('+')?'var(--gn)':'var(--rd)';
+                    return `<span class="prec-outcome"><strong style="color:var(--ac)">${o.ticker}</strong> <strong style="color:${clr}">${o.move}</strong> <span style="color:var(--mt)">${o.period}</span></span>`;
+                }).join('')}</div>
+            </div>`;
+        });
+    }
+
+    // Cross-catalyst overlay
+    if(d.active_catalysts?.length){
+        h+=`<div class="catalysts-box">
+            <div class="section-hdr" style="color:var(--pu);margin-bottom:4px">⚡ Compounding Catalysts</div>
+            ${d.active_catalysts.map(c=>`<div class="catalyst-item">${c}</div>`).join('')}
+        </div>`;
+    }
+
     // Edge header
-    if(d.top_picks?.length) h+=`<div class="edge-header">🔍 What the market is missing</div>`;
+    if(d.top_picks?.length) h+=`<div class="edge-header">🔍 Actionable Trades</div>`;
 
     // Ticker cards
     if(d.top_picks?.length){
@@ -390,6 +439,16 @@ function renderAnalysis(d){
             // Analysis
             if(t.investment_analysis){
                 h+=`<div class="analysis">${t.investment_analysis}</div>`;
+            }
+
+            // Earnings impact (quantified)
+            if(t.earnings_impact){
+                h+=`<div class="tk-earnings">💰 ${t.earnings_impact}</div>`;
+            }
+
+            // Historical precedent for this ticker
+            if(t.precedent_move){
+                h+=`<div class="tk-precedent">📜 Precedent: ${t.precedent_move}</div>`;
             }
 
             // Context bar
