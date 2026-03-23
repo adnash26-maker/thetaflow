@@ -145,7 +145,10 @@ def get_signals():
     hours = request.args.get("hours", 72, type=int)
     limit = request.args.get("limit", 10, type=int)
 
-    events = db.get_recent_events(hours=hours, limit=30)
+    events = db.get_recent_events(hours=hours, limit=50)
+    # Prioritize news headlines over SEC filings for better readability
+    events.sort(key=lambda e: (0 if e.get("source") == "newsapi" else 1, e.get("timestamp", "")), reverse=False)
+    events.sort(key=lambda e: e.get("source") == "newsapi", reverse=True)
     signals = []
 
     for event in events:
