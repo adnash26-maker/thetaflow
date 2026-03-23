@@ -202,23 +202,50 @@ function addAnalysisMessage(data) {
         html += '</div>';
     }
 
-    // Top picks as chips
+    // Top picks with full financial analysis
     if (data.top_picks && data.top_picks.length) {
-        html += '<div style="margin-top:12px;margin-bottom:4px;font-size:12px;color:var(--muted);font-weight:600;">TOP PICKS</div>';
-        html += '<div class="signal-picks">';
+        html += '<div style="margin-top:16px;margin-bottom:8px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Investment Analysis</div>';
         data.top_picks.forEach(t => {
             const dir = t.direction === 'bullish' ? '🟢' : '🔴';
             const priceStr = t.current_price ? `$${t.current_price.toFixed(2)}` : '';
             const chgClass = (t.change_pct || 0) >= 0 ? 'positive' : 'negative';
             const chgStr = t.current_price ? `${t.change_pct >= 0 ? '+' : ''}${t.change_pct.toFixed(1)}%` : '';
-            html += `<div class="pick-chip">
-                ${dir} <span class="pick-ticker">${t.ticker}</span>
-                <span class="pick-price">${priceStr}</span>
-                <span class="${chgClass}">${chgStr}</span>
-                <span class="pick-conviction">${(t.conviction*100).toFixed(0)}%</span>
+            const f = t.financials || {};
+
+            html += `<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid ${t.direction === 'bullish' ? 'var(--green)' : 'var(--red)'};">`;
+
+            // Header row: ticker, price, change
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div>
+                    ${dir} <strong style="color:var(--accent);font-size:16px;">${t.ticker}</strong>
+                    <span style="color:var(--muted);margin-left:6px;">${t.company}</span>
+                </div>
+                <div style="text-align:right;">
+                    <span style="font-weight:700;font-size:16px;">${priceStr}</span>
+                    <span class="${chgClass}" style="margin-left:6px;">${chgStr}</span>
+                </div>
             </div>`;
+
+            // Financial metrics row
+            if (f.market_cap || f.pe_forward || f.revenue_growth !== undefined) {
+                html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;font-size:12px;">';
+                if (f.market_cap) html += `<span style="color:var(--muted);">Cap: <strong>${f.market_cap}</strong></span>`;
+                if (f.pe_forward) html += `<span style="color:var(--muted);">Fwd P/E: <strong>${f.pe_forward}x</strong></span>`;
+                if (f.revenue_growth !== null && f.revenue_growth !== undefined) html += `<span style="color:var(--muted);">Rev Growth: <strong class="${f.revenue_growth >= 0 ? 'positive' : 'negative'}">${f.revenue_growth > 0 ? '+' : ''}${f.revenue_growth}%</strong></span>`;
+                if (f.profit_margin !== null && f.profit_margin !== undefined) html += `<span style="color:var(--muted);">Margin: <strong>${f.profit_margin}%</strong></span>`;
+                if (f.analyst_upside_pct !== null && f.analyst_upside_pct !== undefined) html += `<span style="color:var(--muted);">Analyst Target: <strong class="${f.analyst_upside_pct >= 0 ? 'positive' : 'negative'}">${f.analyst_upside_pct > 0 ? '+' : ''}${f.analyst_upside_pct}% upside</strong></span>`;
+                html += '</div>';
+            }
+
+            // Investment analysis paragraph
+            if (t.investment_analysis) {
+                html += `<div style="font-size:13px;line-height:1.6;color:var(--text);margin-bottom:8px;">${t.investment_analysis}</div>`;
+            }
+
+            // Context line
+            html += `<div style="font-size:11px;color:var(--muted);">${t.chain_name} → ${t.layer} · ${t.time_horizon.replace('_',' ')} · ${(t.conviction*100).toFixed(0)}% conviction</div>`;
+            html += '</div>';
         });
-        html += '</div>';
     }
 
     // Full chain expansion for all recommendations

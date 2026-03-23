@@ -14,9 +14,12 @@ Core Logic:
 
 import sqlite3
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 from dataclasses import dataclass
+
+from financial_data import get_full_financials, generate_investment_thesis
 
 from value_chains import ALL_CHAINS, ValueChain, ChainNode, find_chains_for_event
 
@@ -39,6 +42,9 @@ class ImpactRecommendation:
     current_price: float = 0
     change_pct: float = 0
     exposure: str = "high"
+    # Financial data
+    financials: dict = None
+    investment_analysis: str = ""
 
 
 class ImpactEngine:
@@ -71,7 +77,7 @@ class ImpactEngine:
             all_recommendations.extend(recs)
 
         # Fetch current prices for all recommended tickers
-        self._enrich_with_prices(all_recommendations)
+        self._enrich_with_financials(all_recommendations, headline)
 
         # Sort by conviction * impact_score
         all_recommendations.sort(
@@ -131,7 +137,7 @@ class ImpactEngine:
             })
 
         # Fetch prices
-        self._enrich_with_prices(all_recs)
+        self._enrich_with_financials(all_recs)
 
         return {
             "chain_id": chain_id,
@@ -164,7 +170,7 @@ class ImpactEngine:
                         exposure=t.get("exposure", "medium"),
                     ))
 
-        self._enrich_with_prices(all_recs)
+        self._enrich_with_financials(all_recs)
 
         # Deduplicate tickers (some appear in multiple chains)
         seen = {}
@@ -238,22 +244,49 @@ class ImpactEngine:
         else:
             return "long_term"
 
-    def _enrich_with_prices(self, recs: List[ImpactRecommendation]):
-        """Add current price data to recommendations from the database."""
+    def _enrich_with_financials(self, recs: List[ImpactRecommendation],
+                                headline: str = ""):
+        """Pull full financial data for top recommendations and generate analysis."""
         if not recs:
             return
 
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
+        # Only pull full financials for top 8 to avoid rate limiting
+        seen = set()
         for rec in recs:
-            row = conn.execute("""
-                SELECT price, change_pct FROM ticker_prices
-                WHERE ticker = ? ORDER BY timestamp DESC LIMIT 1
-            """, (rec.ticker,)).fetchone()
-            if row:
-                rec.current_price = row["price"]
-                rec.change_pct = row["change_pct"]
-        conn.close()
+            if rec.ticker in seen:
+                # Copy financials from the first instance
+                for prev in recs:
+                    if prev.ticker == rec.ticker and prev.financials:
+                        rec.financials = prev.financials
+                        rec.current_price = prev.current_price
+                        rec.change_pct = prev.change_pct
+                        rec.investment_analysis = prev.investment_analysis
+                        break
+                continue
+
+            if len(seen) < 8:
+                fin = get_full_financials(rec.ticker)
+                if fin:
+                    rec.financials = fin
+                    rec.current_price = fin.get("price", 0)
+                    rec.change_pct = fin.get("change_pct", 0)
+                    rec.investment_analysis = generate_investment_thesis(
+                        fin, rec.chain_name, rec.layer, rec.exposure, headline
+                    )
+                    seen.add(rec.ticker)
+                    time.sleep(0.3)
+            else:
+                # Fallback to DB for remaining tickers
+                conn = sqlite3.connect(self.db_path)
+                conn.row_factory = sqlite3.Row
+                row = conn.execute("""
+                    SELECT price, change_pct FROM ticker_prices
+                    WHERE ticker = ? ORDER BY timestamp DESC LIMIT 1
+                """, (rec.ticker,)).fetchone()
+                conn.close()
+                if row:
+                    rec.current_price = row["price"]
+                    rec.change_pct = row["change_pct"]
 
     def _generate_summary(self, headline: str, chains: List[Dict],
                           top_picks: List[ImpactRecommendation]) -> str:
@@ -279,8 +312,8 @@ class ImpactEngine:
         return summary
 
     def _rec_to_dict(self, rec: ImpactRecommendation) -> Dict:
-        """Serialize a recommendation."""
-        return {
+        """Serialize a recommendation with full financial context."""
+        d = {
             "ticker": rec.ticker,
             "company": rec.company,
             "chain_id": rec.chain_id,
@@ -294,4 +327,26 @@ class ImpactEngine:
             "current_price": rec.current_price,
             "change_pct": rec.change_pct,
             "exposure": rec.exposure,
+            "investment_analysis": rec.investment_analysis,
         }
+        # Add key financial metrics if available
+        if rec.financials:
+            f = rec.financials
+            d["financials"] = {
+                "market_cap": f.get("market_cap_str"),
+                "pe_forward": f.get("pe_forward"),
+                "pe_trailing": f.get("pe_trailing"),
+                "peg_ratio": f.get("peg_ratio"),
+                "revenue_growth": f.get("revenue_growth"),
+                "profit_margin": f.get("profit_margin"),
+                "analyst_target": f.get("analyst_target"),
+                "analyst_upside_pct": f.get("analyst_upside_pct"),
+                "analyst_count": f.get("analyst_count"),
+                "recommendation": f.get("recommendation"),
+                "fifty_two_high": f.get("fifty_two_high"),
+                "fifty_two_low": f.get("fifty_two_low"),
+                "distance_from_high_pct": f.get("distance_from_high_pct"),
+                "short_pct_float": f.get("short_pct_float"),
+                "beta": f.get("beta"),
+            }
+        return d
