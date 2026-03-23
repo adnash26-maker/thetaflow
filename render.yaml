@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: thetaflow
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: NEWSAPI_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
