@@ -149,7 +149,23 @@ const SUGG=[
     {i:'🏭',t:'TSMC announces $100B investment in US chip fabs'},
 ];
 
+// Show static suggestions first, then replace with real headlines
 document.getElementById('sugg').innerHTML=SUGG.map(s=>`<div class="sugg-pill" onclick="pick('${s.t.replace(/'/g,"\\'")}')">${s.i} ${s.t}</div>`).join('');
+
+// Load real headlines as suggestions
+(async()=>{
+    try{
+        const r=await fetch(`${API}/signals?hours=72&limit=6`);
+        const d=await r.json();
+        if(d.success&&d.signals.length>=3){
+            const el=document.getElementById('sugg');
+            el.innerHTML=d.signals.map(s=>{
+                const title=s.title.length>80?s.title.substring(0,77)+'...':s.title;
+                return `<div class="sugg-pill" onclick="pick('${title.replace(/'/g,"\\'")}')" style="border-left:3px solid ${s.chains?.[0]?.theme_color||'var(--bd)'}">📰 ${title}</div>`;
+            }).join('')+SUGG.slice(0,2).map(s=>`<div class="sugg-pill" onclick="pick('${s.t.replace(/'/g,"\\'")}')">${s.i} ${s.t}</div>`).join('');
+        }
+    }catch(e){}
+})();
 
 function pick(t){document.getElementById('inp').value=t;send()}
 function scrollEnd(){const c=document.getElementById('chat');setTimeout(()=>c.scrollTop=c.scrollHeight,50)}
