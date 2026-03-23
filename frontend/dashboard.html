@@ -32,6 +32,18 @@
         .verdict-bar{flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden}
         .verdict-fill{height:100%;border-radius:3px;transition:width .5s ease}
 
+        /* Obvious Play Dismissal */
+        .obvious{background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;border:1px solid var(--bd);opacity:.7}
+        .obvious-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);background:var(--bg);padding:2px 6px;border-radius:3px;flex-shrink:0}
+        .obvious-text{font-size:12px;color:var(--mt);flex:1}
+        .obvious-ticker{font-weight:800;color:var(--ac)}
+
+        /* Hidden Edge Header */
+        .edge-header{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--cy);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+        .order-badge{font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px;letter-spacing:.3px}
+        .order-badge.o2{background:#06b6d420;color:var(--cy)}
+        .order-badge.o3{background:#8b5cf620;color:var(--pu)}
+
         /* Chain Flow */
         .chain-flow{display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap}
         .chain-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid}
@@ -150,23 +162,23 @@
     <div class="msg msg-a">
         <div class="lbl">ThetaFlow</div>
         <div class="bub">
-            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Investment Intelligence ⚡</div>
-            <p style="color:var(--mt);margin-bottom:14px;font-size:13px">Enter any market event. I'll build the value chain, identify affected tickers, and project 30-day price impact with actionable recommendations.</p>
+            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Find the trades everyone else misses ⚡</div>
+            <p style="color:var(--mt);margin-bottom:14px;font-size:13px">Enter any headline. I'll skip the obvious reaction and find the second and third-order plays — the hidden winners and losers the market hasn't priced in yet.</p>
             <div class="intro-features">
                 <div class="intro-feat">
-                    <div class="intro-feat-icon">🔗</div>
-                    <div class="intro-feat-title">Dynamic Chains</div>
-                    <div class="intro-feat-desc">AI maps the full supply chain — any sector, any event</div>
+                    <div class="intro-feat-icon">🔍</div>
+                    <div class="intro-feat-title">Hidden Connections</div>
+                    <div class="intro-feat-desc">Second and third-order supply chain effects most investors miss</div>
                 </div>
                 <div class="intro-feat">
                     <div class="intro-feat-icon">📊</div>
                     <div class="intro-feat-title">Price Projections</div>
-                    <div class="intro-feat-desc">6-month history + 30-day volatility cone per ticker</div>
+                    <div class="intro-feat-desc">30-day volatility cone with conviction-weighted targets</div>
                 </div>
                 <div class="intro-feat">
                     <div class="intro-feat-icon">🎯</div>
-                    <div class="intro-feat-title">Action Signals</div>
-                    <div class="intro-feat-desc">BUY / SELL / WATCH with conviction % and risk/reward</div>
+                    <div class="intro-feat-title">Actionable Signals</div>
+                    <div class="intro-feat-desc">BUY / SHORT / WATCH with entry logic and risk/reward</div>
                 </div>
             </div>
             <div class="sugg" id="sugg"></div>
@@ -250,8 +262,21 @@ function renderAnalysis(d){
         h+='</div>';
     }
 
-    // Summary
-    if(d.summary) h+=`<p style="font-size:14px;margin-bottom:16px;line-height:1.7">${d.summary}</p>`;
+    // Obvious play dismissal
+    if(d.obvious_play){
+        const op=d.obvious_play;
+        const opDir=op.direction==='bullish'?'↑':'↓';
+        h+=`<div class="obvious">
+            <span class="obvious-tag">Priced In</span>
+            <span class="obvious-text"><span class="obvious-ticker">${op.ticker} ${opDir}</span> — ${op.summary}</span>
+        </div>`;
+    }
+
+    // Summary — focused on what the market is missing
+    if(d.summary) h+=`<p style="font-size:14px;margin-bottom:14px;line-height:1.7">${d.summary}</p>`;
+
+    // Edge header
+    if(d.top_picks?.length) h+=`<div class="edge-header">🔍 What the market is missing</div>`;
 
     // Ticker cards
     if(d.top_picks?.length){
@@ -273,11 +298,15 @@ function renderAnalysis(d){
             const targetPrice=t.current_price?(t.current_price*(1+proj30d/100)).toFixed(2):null;
             const rr=t.risk_reward||null;
 
+            const orderNum=t.order||1;
+            const orderBadge=orderNum>=2?`<span class="order-badge ${orderNum>=3?'o3':'o2'}">${orderNum===2?'2nd Order':'3rd Order'}</span>`:'';
+
             h+=`<div class="tk-head">
                 <div class="tk-left">
                     <div class="tk-dir ${t.direction==='bullish'?'bull':'bear'}"></div>
                     <span class="tk-sym">${t.ticker}</span>
                     <span class="tk-action ${actionCls}">${action}</span>
+                    ${orderBadge}
                     <span class="tk-name">${t.company}</span>
                 </div>
                 <div class="tk-right">

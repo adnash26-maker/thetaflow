@@ -333,6 +333,7 @@ def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
         "recommendations": all_valid,
         "summary": ai_result.get("summary", ""),
         "risk_factors": ai_result.get("risk_factors", []),
+        "obvious_play": ai_result.get("obvious_play"),
         "contrarian_view": ai_result.get("contrarian_view", ""),
         "ai_time_horizon": ai_result.get("time_horizon", ""),
         "analyzed_at": datetime.utcnow().isoformat(),

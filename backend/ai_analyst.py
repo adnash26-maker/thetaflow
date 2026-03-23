@@ -139,11 +139,16 @@ IMPORTANT:
         if not self.available:
             return None
 
-        prompt = f"""You are a senior investment analyst building value chain maps in real time. Given a market event, identify the investment themes and map the full value chain from upstream to downstream, with specific publicly traded tickers at each layer.
+        prompt = f"""You are a senior PM at a multi-strategy hedge fund. Your edge is finding the second and third-order trades that the market misses. Everyone knows the obvious play — your job is to find what's NOT obvious.
 
 EVENT: {headline}
 
-Analyze this event and produce a comprehensive investment analysis in this exact JSON format:
+Think step by step:
+1. What is the OBVIOUS first-order reaction? (Acknowledge it briefly — the market prices this in minutes.)
+2. What are the HIDDEN second-order effects? (Suppliers, competitors gaining share, downstream disruptions, adjacent sectors, companies losing/gaining pricing power.)
+3. What are the THIRD-ORDER trades? (The picks no one is talking about yet that will move in weeks, not hours.)
+
+Produce your analysis in this exact JSON format:
 
 {{
   "chains": [
@@ -154,6 +159,12 @@ Analyze this event and produce a comprehensive investment analysis in this exact
       "relevance_score": 0.85
     }}
   ],
+  "obvious_play": {{
+    "ticker": "SYMBOL",
+    "company": "Company Name",
+    "direction": "bullish or bearish",
+    "summary": "One sentence. Everyone already knows this. Market prices it in minutes."
+  }},
   "top_picks": [
     {{
       "ticker": "SYMBOL",
@@ -161,38 +172,36 @@ Analyze this event and produce a comprehensive investment analysis in this exact
       "direction": "bullish",
       "conviction": 0.85,
       "action": "BUY",
+      "order": 2,
       "layer": "Value Chain Layer Name",
       "chain_name": "Which chain this belongs to",
       "chain_id": "matching_chain_id",
       "exposure": "critical",
-      "thesis": "2-3 sentences: (1) WHY this event impacts this company's revenue/earnings, (2) the specific financial catalyst, (3) whether current valuation supports the trade.",
-      "time_horizon": "immediate",
+      "thesis": "2-3 sentences: (1) the NON-OBVIOUS connection most investors miss, (2) specific revenue/earnings impact with numbers if possible, (3) entry logic — why NOW at this price.",
+      "time_horizon": "short_term",
       "impact_score": 85.0,
       "risk_reward": "3:1"
     }}
   ],
   "all_tickers": [
   ],
-  "summary": "2-3 sentence executive summary of the event's investment implications across the full value chain.",
+  "summary": "2-3 sentences focused on the HIDDEN opportunity. Don't waste words on what's obvious. Lead with what the market is missing and why it matters.",
   "risk_factors": ["Specific risk 1", "Specific risk 2", "Specific risk 3"],
-  "contrarian_view": "One sentence on what could go wrong or what the market may be missing",
-  "time_horizon": "Overall time horizon for this catalyst to impact markets"
+  "contrarian_view": "One sentence — the strongest argument against these trades.",
+  "time_horizon": "Overall time horizon for the non-obvious effects to play out"
 }}
 
-RULES:
-- Use ONLY real, currently publicly traded US tickers (NYSE, NASDAQ). No OTC, no delisted, no international-only.
-- Each ticker must be a real company with a real relationship to this event.
-- Order top_picks by conviction * impact_score descending.
-- Include 5-8 tickers in top_picks, and 8-15 in all_tickers (all_tickers should include everything from top_picks plus additional tickers).
-- Cover the FULL value chain: upstream suppliers, direct players, downstream beneficiaries, and potential losers (with direction: "bearish").
-- theme_color: purple for tech, green for energy, pink for healthcare, orange for security, blue for finance, etc.
-- conviction reflects both the causal link strength AND expected magnitude.
-- action: "BUY" for bullish high-conviction, "SELL" or "SHORT" for bearish, "WATCH" for medium conviction or unclear timing, "AVOID" for negative exposure.
-- risk_reward: estimated ratio like "3:1", "2:1", "5:1" based on potential upside vs downside.
-- Be specific in thesis — explain (1) the transmission mechanism from event to earnings, (2) the financial catalyst, (3) whether valuation supports the trade at current levels.
-- exposure: "critical" = >50% revenue directly affected, "high" = significant segment, "medium" = partial, "negative" = event hurts this company.
-- time_horizon per ticker: "immediate", "short_term", "medium_term", or "long_term".
-- If the event is about a specific company, that company should be the highest conviction pick."""
+CRITICAL RULES:
+- top_picks should be the NON-OBVIOUS plays. Do NOT put the headline company first unless it's genuinely mispriced.
+- order: 2 = second-order effect, 3 = third-order effect. At least 3 of top_picks must be order 2 or 3.
+- The edge is in the thesis: explain a connection most investors haven't made yet. "NVDA benefits from AI" is worthless. "ANET captures 15% of every new GPU cluster buildout through 400G switches" is edge.
+- Use ONLY real US-listed tickers (NYSE/NASDAQ).
+- Include 5-8 tickers in top_picks (prioritize non-obvious), 8-15 in all_tickers.
+- action: "BUY", "SHORT", "WATCH", or "AVOID".
+- risk_reward: "3:1", "5:1", etc.
+- time_horizon per ticker: "immediate", "short_term", "medium_term", "long_term".
+- theme_color: hex color matching the sector theme.
+- If the event is about a specific company, acknowledge it in obvious_play, then focus top_picks on the hidden plays around it."""
 
         try:
             response = self.client.messages.create(
