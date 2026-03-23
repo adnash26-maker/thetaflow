@@ -136,6 +136,55 @@ def get_chain_detail(chain_id):
         return jsonify({"success": False, "error": analysis["error"]}), 404
     return jsonify({"success": True, **analysis})
 
+@app.route("/api/signals", methods=["GET"])
+def get_signals():
+    """Get today's top events pre-analyzed with chain impacts and ticker recommendations.
+    This is the primary dashboard endpoint — shows what happened and what it means."""
+    hours = request.args.get("hours", 72, type=int)
+    limit = request.args.get("limit", 10, type=int)
+
+    events = db.get_recent_events(hours=hours, limit=30)
+    signals = []
+
+    for event in events:
+        try:
+            matched_chains = json.loads(event.get("matched_chains", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            matched_chains = []
+
+        # Only show events that matched at least one chain
+        if not matched_chains:
+            # Try re-analyzing (event might have been stored before keyword improvements)
+            matched_chains = find_chains_for_event(event["title"])
+
+        if not matched_chains:
+            continue
+
+        # Get top ticker recommendations for this event
+        analysis = engine.analyze_event(event["title"], event.get("event_type", "news"))
+        top_picks = analysis.get("top_picks", [])[:3]
+
+        signals.append({
+            "title": event["title"],
+            "source": event["source"],
+            "severity": event["severity"],
+            "timestamp": event["timestamp"],
+            "url": event.get("url", ""),
+            "chains": matched_chains[:2],
+            "top_picks": top_picks,
+            "summary": analysis.get("summary", ""),
+        })
+
+        if len(signals) >= limit:
+            break
+
+    return jsonify({
+        "success": True,
+        "signals": signals,
+        "count": len(signals),
+        "generated_at": datetime.utcnow().isoformat(),
+    })
+
 @app.route("/api/analyze", methods=["POST"])
 def analyze_event():
     """Analyze a news headline or event and get investment recommendations."""

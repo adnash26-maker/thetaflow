@@ -76,37 +76,42 @@
 </nav>
 
 <div class="container">
-    <!-- Event Analyzer -->
+    <!-- TODAY'S SIGNALS: Auto-analyzed events — the primary experience -->
     <div class="panel" style="margin-bottom:16px;">
-        <div class="panel-title">🔍 Event Analyzer <span class="badge badge-purple">AI-Powered</span></div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Paste a news headline to see which value chains and tickers are impacted.</p>
-        <input type="text" class="analyze-input" id="analyzeInput" placeholder="e.g. Microsoft announces $80B AI infrastructure investment for 2026" onkeydown="if(event.key==='Enter')analyzeEvent()">
-        <button class="btn primary analyze-btn" onclick="analyzeEvent()">Analyze Impact</button>
-        <div id="analysisResult"></div>
-    </div>
-
-    <!-- Value Chains -->
-    <div class="panel-title" style="margin-bottom:12px;">⛓️ Value Chains</div>
-    <div class="grid-2" id="chainsGrid" style="margin-bottom:20px;">
-        <div class="loading"><div class="spinner"></div>Loading chains...</div>
-    </div>
-
-    <div class="grid-2">
-        <!-- Recent Events -->
-        <div class="panel">
-            <div class="panel-title">📰 Latest Catalysts <span class="badge badge-green" id="eventCount">0</span></div>
-            <div id="eventsContainer">
-                <div class="loading"><div class="spinner"></div>Loading events...</div>
-            </div>
+        <div class="panel-title">⚡ Today's Signals <span class="badge badge-green" id="signalCount">Loading...</span></div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Breaking events automatically analyzed for investment impact across all value chains.</p>
+        <div id="signalsContainer">
+            <div class="loading"><div class="spinner"></div>Analyzing latest events...</div>
         </div>
+    </div>
 
+    <!-- Portfolio + Chains side by side -->
+    <div class="grid-2" style="margin-bottom:16px;">
         <!-- Portfolio View -->
         <div class="panel">
-            <div class="panel-title">📊 Portfolio Recommendations <span class="badge badge-purple" id="tickerCount">0 tickers</span></div>
-            <div id="portfolioContainer">
-                <div class="loading"><div class="spinner"></div>Loading portfolio...</div>
+            <div class="panel-title">📊 Top Picks Across All Chains <span class="badge badge-purple" id="tickerCount">0</span></div>
+            <div id="portfolioContainer" style="max-height:500px;overflow-y:auto;">
+                <div class="loading"><div class="spinner"></div>Loading...</div>
             </div>
         </div>
+
+        <!-- Value Chains -->
+        <div class="panel">
+            <div class="panel-title">⛓️ Value Chains</div>
+            <div id="chainsGrid" style="display:flex;flex-direction:column;gap:10px;">
+                <div class="loading"><div class="spinner"></div>Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Analyzer (secondary) -->
+    <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-title">🔍 Analyze Any Event <span class="badge badge-purple">Custom</span></div>
+        <div style="display:flex;gap:8px;">
+            <input type="text" class="analyze-input" id="analyzeInput" placeholder="Paste any headline — e.g. TSMC announces $100B investment in US chip fabs" onkeydown="if(event.key==='Enter')analyzeEvent()" style="flex:1;">
+            <button class="btn primary" onclick="analyzeEvent()" style="white-space:nowrap;padding:14px 24px;">Analyze</button>
+        </div>
+        <div id="analysisResult"></div>
     </div>
 </div>
 
@@ -139,10 +144,46 @@ let authMode = 'login';
 let currentUser = null;
 
 async function loadData() {
+    loadSignals();
     loadChains();
-    loadEvents();
     loadPortfolio();
     checkAuth();
+}
+
+async function loadSignals() {
+    try {
+        const resp = await fetch(`${API}/signals?hours=72&limit=8`);
+        const data = await resp.json();
+        if (!data.success) return;
+        document.getElementById('signalCount').textContent = `${data.count} signals`;
+        const container = document.getElementById('signalsContainer');
+        if (!data.signals.length) {
+            container.innerHTML = '<p style="color:var(--muted);padding:20px;text-align:center;">No chain-matched events yet. Click Refresh to collect latest news.</p>';
+            return;
+        }
+        container.innerHTML = data.signals.map(s => {
+            const severity = s.severity === 'high' ? '🔴' : s.severity === 'critical' ? '🔴🔴' : '🟡';
+            const chains = (s.chains || []).map(c =>
+                `<span class="chain-tag" style="border-color:${c.theme_color || 'var(--border)'}">${c.chain_name} ${(c.relevance_score*100).toFixed(0)}%</span>`
+            ).join(' ');
+            const picks = (s.top_picks || []).map(t => {
+                const dirIcon = t.direction === 'bullish' ? '🟢' : '🔴';
+                const priceStr = t.current_price ? `$${t.current_price.toFixed(0)}` : '';
+                return `<div style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);padding:4px 10px;border-radius:6px;font-size:12px;margin-right:6px;margin-top:4px;">
+                    ${dirIcon} <strong style="color:var(--accent);">${t.ticker}</strong> ${priceStr}
+                    <span style="color:var(--muted);">${(t.conviction*100).toFixed(0)}%</span>
+                </div>`;
+            }).join('');
+            const timeAgo = getTimeAgo(s.timestamp);
+            return `<div style="padding:14px 0;border-bottom:1px solid var(--border);">
+                <div style="font-size:15px;font-weight:600;margin-bottom:6px;">${severity} ${s.title}</div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${s.source} · ${timeAgo}</div>
+                <div style="margin-bottom:6px;">${chains}</div>
+                <div>${picks}</div>
+                ${s.summary ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;font-style:italic;">${s.summary}</div>` : ''}
+            </div>`;
+        }).join('');
+    } catch(e) { console.error('Failed to load signals:', e); }
 }
 
 async function loadChains() {
@@ -153,8 +194,8 @@ async function loadChains() {
         const grid = document.getElementById('chainsGrid');
         grid.innerHTML = data.chains.map(c => `
             <div class="chain-card" onclick="showChain('${c.id}')" style="border-left:3px solid ${c.theme_color}">
-                <h3>${c.name}</h3>
-                <p>${c.description.substring(0, 120)}...</p>
+                <h3 style="font-size:15px;">${c.name}</h3>
+                <p style="font-size:12px;">${c.description.substring(0, 80)}...</p>
                 <div class="chain-stats">
                     <span>📊 ${c.node_count} layers</span>
                     <span>🏷️ ${c.ticker_count} tickers</span>
