@@ -397,6 +397,78 @@ class FREDCollector:
         return events
 
 
+# ── WSJ RSS Collector ──
+
+class WSJCollector:
+    """Pulls headlines from Wall Street Journal RSS feeds."""
+
+    FEEDS = {
+        "markets": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+        "business": "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
+        "technology": "https://feeds.a.dj.com/rss/RSSWSJD.xml",
+        "world": "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
+    }
+
+    def collect(self) -> List[CatalystEvent]:
+        """Pull latest headlines from WSJ RSS feeds."""
+        import xml.etree.ElementTree as ET
+
+        events = []
+        seen_titles = set()
+        cutoff = datetime.utcnow() - timedelta(hours=72)
+
+        for feed_name, feed_url in self.FEEDS.items():
+            try:
+                resp = requests.get(feed_url, headers={
+                    "User-Agent": "ThetaFlow/1.0"
+                }, timeout=10)
+                if resp.status_code != 200:
+                    continue
+
+                root = ET.fromstring(resp.content)
+                for item in root.findall(".//item"):
+                    title = item.findtext("title", "").strip()
+                    if not title or len(title) < 15 or title in seen_titles:
+                        continue
+
+                    link = item.findtext("link", "")
+                    pub_date_str = item.findtext("pubDate", "")
+                    description = item.findtext("description", "")
+
+                    # Parse RSS date format
+                    pub_date = datetime.utcnow()
+                    if pub_date_str:
+                        try:
+                            from email.utils import parsedate_to_datetime
+                            pub_date = parsedate_to_datetime(pub_date_str)
+                        except Exception:
+                            pass
+
+                    if pub_date.replace(tzinfo=None) < cutoff:
+                        continue
+
+                    seen_titles.add(title)
+                    events.append(CatalystEvent(
+                        title=title[:200],
+                        source="wsj",
+                        event_type="news",
+                        severity="high",
+                        timestamp=pub_date.isoformat(),
+                        url=link,
+                        metadata={
+                            "source_name": "Wall Street Journal",
+                            "feed": feed_name,
+                            "description": (description or "")[:300],
+                        }
+                    ))
+
+            except Exception as e:
+                logger.debug(f"WSJ RSS error for {feed_name}: {e}")
+
+        logger.info(f"WSJ: collected {len(events)} headlines")
+        return events
+
+
 # ── Yahoo Finance Price Collector ──
 
 class YahooFinanceCollector:
@@ -442,6 +514,7 @@ class EventOrchestrator:
     def __init__(self, db: EventDatabase):
         self.db = db
         self.news = NewsCollector()
+        self.wsj = WSJCollector()
         self.sec = SECEdgarCollector()
         self.fred = FREDCollector()
         self.yahoo = YahooFinanceCollector()
@@ -457,13 +530,16 @@ class EventOrchestrator:
         news_events = self.news.collect()
         counts["news"] = len(news_events)
 
+        wsj_events = self.wsj.collect()
+        counts["wsj"] = len(wsj_events)
+
         sec_events = self.sec.collect()
         counts["sec_filings"] = len(sec_events)
 
         fred_events = self.fred.collect()
         counts["macro"] = len(fred_events)
 
-        all_events = news_events + sec_events + fred_events
+        all_events = wsj_events + news_events + sec_events + fred_events
 
         # 2. Match events to value chains
         for event in all_events:

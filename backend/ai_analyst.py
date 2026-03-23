@@ -129,3 +129,116 @@ IMPORTANT:
         except Exception as e:
             logger.error(f"AI analysis failed: {e}")
             return {"analysis": "", "ticker_analyses": {}, "risk_factors": []}
+
+    def generate_dynamic_chains(self, headline: str) -> Optional[Dict]:
+        """Use Claude to dynamically generate value chain analysis for a headline.
+
+        Instead of matching against pre-built chains, Claude identifies
+        relevant investment themes and builds chains on the fly.
+        """
+        if not self.available:
+            return None
+
+        prompt = f"""You are a senior investment analyst building value chain maps in real time. Given a market event, identify the investment themes and map the full value chain from upstream to downstream, with specific publicly traded tickers at each layer.
+
+EVENT: {headline}
+
+Analyze this event and produce a comprehensive investment analysis in this exact JSON format:
+
+{{
+  "chains": [
+    {{
+      "chain_id": "short_snake_case_id",
+      "chain_name": "Human Readable Theme Name",
+      "theme_color": "#hex_color",
+      "relevance_score": 0.85
+    }}
+  ],
+  "top_picks": [
+    {{
+      "ticker": "SYMBOL",
+      "company": "Full Company Name",
+      "direction": "bullish",
+      "conviction": 0.85,
+      "action": "BUY",
+      "layer": "Value Chain Layer Name",
+      "chain_name": "Which chain this belongs to",
+      "chain_id": "matching_chain_id",
+      "exposure": "critical",
+      "thesis": "2-3 sentences: (1) WHY this event impacts this company's revenue/earnings, (2) the specific financial catalyst, (3) whether current valuation supports the trade.",
+      "time_horizon": "immediate",
+      "impact_score": 85.0,
+      "risk_reward": "3:1"
+    }}
+  ],
+  "all_tickers": [
+  ],
+  "summary": "2-3 sentence executive summary of the event's investment implications across the full value chain.",
+  "risk_factors": ["Specific risk 1", "Specific risk 2", "Specific risk 3"],
+  "contrarian_view": "One sentence on what could go wrong or what the market may be missing",
+  "time_horizon": "Overall time horizon for this catalyst to impact markets"
+}}
+
+RULES:
+- Use ONLY real, currently publicly traded US tickers (NYSE, NASDAQ). No OTC, no delisted, no international-only.
+- Each ticker must be a real company with a real relationship to this event.
+- Order top_picks by conviction * impact_score descending.
+- Include 5-8 tickers in top_picks, and 8-15 in all_tickers (all_tickers should include everything from top_picks plus additional tickers).
+- Cover the FULL value chain: upstream suppliers, direct players, downstream beneficiaries, and potential losers (with direction: "bearish").
+- theme_color: purple for tech, green for energy, pink for healthcare, orange for security, blue for finance, etc.
+- conviction reflects both the causal link strength AND expected magnitude.
+- action: "BUY" for bullish high-conviction, "SELL" or "SHORT" for bearish, "WATCH" for medium conviction or unclear timing, "AVOID" for negative exposure.
+- risk_reward: estimated ratio like "3:1", "2:1", "5:1" based on potential upside vs downside.
+- Be specific in thesis — explain (1) the transmission mechanism from event to earnings, (2) the financial catalyst, (3) whether valuation supports the trade at current levels.
+- exposure: "critical" = >50% revenue directly affected, "high" = significant segment, "medium" = partial, "negative" = event hurts this company.
+- time_horizon per ticker: "immediate", "short_term", "medium_term", or "long_term".
+- If the event is about a specific company, that company should be the highest conviction pick."""
+
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4000,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            text = response.content[0].text.strip()
+
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+
+            result = json.loads(text)
+
+            if not result.get("top_picks"):
+                logger.warning("Claude returned no top_picks")
+                return None
+
+            # Normalize ticker data — filter out non-dict items
+            for key in ("top_picks", "all_tickers"):
+                items = result.get(key, [])
+                cleaned = [p for p in items if isinstance(p, dict) and p.get("ticker")]
+                for pick in cleaned:
+                    pick["ticker"] = str(pick["ticker"]).upper().strip()
+                    pick["conviction"] = min(float(pick.get("conviction", 0.5)), 0.95)
+                    pick["impact_score"] = float(pick.get("impact_score", 50))
+                result[key] = cleaned
+
+            # Map all_tickers → recommendations (frontend field name)
+            result["recommendations"] = result.pop("all_tickers", result.get("top_picks", []))
+
+            # Sort top_picks by conviction * impact_score
+            result["top_picks"] = sorted(
+                result["top_picks"],
+                key=lambda t: t.get("conviction", 0) * t.get("impact_score", 0),
+                reverse=True
+            )[:5]
+
+            return result
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse dynamic chain JSON: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Dynamic chain generation failed: {e}")
+            return None

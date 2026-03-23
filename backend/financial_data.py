@@ -11,10 +11,11 @@ Pulls real financial metrics from Yahoo Finance for investment-grade analysis:
 """
 
 import logging
+import math
 import requests
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from functools import lru_cache
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger("thetaflow.financials")
 
@@ -226,6 +227,150 @@ def generate_investment_thesis(ticker_data: Dict, chain_context: str,
         lines.append(f"Limited financial data available for detailed analysis.")
 
     return " ".join(lines)
+
+
+# ── Price History & Projection Cone ──
+
+_price_history_cache = {}
+
+
+def get_price_history(ticker: str, months: int = 6) -> Optional[Dict]:
+    """Fetch daily price history from Yahoo Finance chart API."""
+    cache_key = f"{ticker}_{months}"
+    now = datetime.utcnow()
+
+    if cache_key in _price_history_cache:
+        cached, cached_at = _price_history_cache[cache_key]
+        if (now - cached_at).total_seconds() < 300:
+            return cached
+
+    try:
+        range_map = {1: "1mo", 3: "3mo", 6: "6mo", 12: "1y"}
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+        resp = requests.get(url, headers={"User-Agent": "ThetaFlow/1.0"},
+                           params={"interval": "1d", "range": range_map.get(months, "6mo")},
+                           timeout=8)
+        if resp.status_code != 200:
+            return None
+
+        chart = resp.json().get("chart", {}).get("result", [{}])[0]
+        timestamps = chart.get("timestamp", [])
+        quotes = chart.get("indicators", {}).get("quote", [{}])[0]
+        closes_raw = quotes.get("close", [])
+
+        if not timestamps or not closes_raw:
+            return None
+
+        # Zip and filter out None values
+        dates = []
+        closes = []
+        for ts, c in zip(timestamps, closes_raw):
+            if c is not None and c > 0:
+                dates.append(datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d"))
+                closes.append(round(c, 2))
+
+        if len(closes) < 20:
+            return None
+
+        result = {
+            "ticker": ticker,
+            "dates": dates,
+            "closes": closes,
+            "current_price": closes[-1],
+        }
+
+        _price_history_cache[cache_key] = (result, now)
+        return result
+    except Exception as e:
+        logger.debug(f"Price history failed for {ticker}: {e}")
+        return None
+
+
+def compute_projection_cone(closes: List[float], direction: str,
+                            conviction: float, days_forward: int = 30) -> Optional[Dict]:
+    """Compute projection cone using Geometric Brownian Motion."""
+    if len(closes) < 20:
+        return None
+
+    # Calculate daily log returns
+    log_returns = []
+    for i in range(1, len(closes)):
+        if closes[i] > 0 and closes[i - 1] > 0:
+            log_returns.append(math.log(closes[i] / closes[i - 1]))
+
+    if len(log_returns) < 10:
+        return None
+
+    # Historical volatility
+    mean_return = sum(log_returns) / len(log_returns)
+    variance = sum((r - mean_return) ** 2 for r in log_returns) / (len(log_returns) - 1)
+    daily_vol = math.sqrt(variance)
+
+    # Direction-adjusted drift
+    sign = 1.0 if direction == "bullish" else -1.0
+    max_daily_drift = 0.003  # ~9% over 30 days at max conviction
+    drift = sign * conviction * max_daily_drift
+
+    last_price = closes[-1]
+    today = datetime.utcnow()
+
+    center = []
+    upper_1sd = []
+    lower_1sd = []
+    upper_2sd = []
+    lower_2sd = []
+    proj_dates = []
+    trading_day = 0
+
+    for day in range(1, days_forward + 1):
+        date = today + timedelta(days=day)
+        if date.weekday() >= 5:
+            continue
+        trading_day += 1
+
+        proj_dates.append(date.strftime("%Y-%m-%d"))
+        t = trading_day
+
+        center_log = math.log(last_price) + drift * t
+        vol_spread = daily_vol * math.sqrt(t)
+
+        center.append(round(math.exp(center_log), 2))
+        upper_1sd.append(round(math.exp(center_log + vol_spread), 2))
+        lower_1sd.append(round(math.exp(center_log - vol_spread), 2))
+        upper_2sd.append(round(math.exp(center_log + 2 * vol_spread), 2))
+        lower_2sd.append(round(math.exp(center_log - 2 * vol_spread), 2))
+
+    return {
+        "center": center,
+        "upper_1sd": upper_1sd,
+        "lower_1sd": lower_1sd,
+        "upper_2sd": upper_2sd,
+        "lower_2sd": lower_2sd,
+        "dates": proj_dates,
+        "daily_vol": round(daily_vol, 5),
+        "drift": round(drift, 5),
+    }
+
+
+def get_ticker_chart_data(ticker: str, direction: str = "bullish",
+                          conviction: float = 0.5) -> Optional[Dict]:
+    """Get complete chart data: 6-month history + projection cone."""
+    history = get_price_history(ticker)
+    if not history or not history.get("closes"):
+        return None
+
+    projection = compute_projection_cone(
+        history["closes"], direction, conviction
+    )
+
+    return {
+        "ticker": ticker,
+        "history": {
+            "dates": history["dates"],
+            "closes": history["closes"],
+        },
+        "projection": projection,
+    }
 
 
 def _format_large_number(n) -> str:

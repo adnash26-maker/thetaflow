@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ThetaFlow — Investment Intelligence</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
         :root{--bg:#0a0e17;--s1:#111827;--s2:#1a2234;--s3:#232d42;--bd:#1f2937;--tx:#e5e7eb;--mt:#9ca3af;--ac:#6366f1;--gn:#10b981;--rd:#ef4444;--yl:#f59e0b;--pu:#8b5cf6;--cy:#06b6d4}
         *{margin:0;padding:0;box-sizing:border-box}
@@ -46,19 +47,32 @@
         .tk-dir.bear{background:var(--rd)}
         .tk-sym{font-weight:800;font-size:16px;color:var(--ac)}
         .tk-name{color:var(--mt);font-size:13px}
+        .tk-action{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:800;letter-spacing:.5px}
+        .tk-action.buy{background:#10b98120;color:var(--gn)}
+        .tk-action.sell,.tk-action.short{background:#ef444420;color:var(--rd)}
+        .tk-action.watch{background:#f59e0b20;color:var(--yl)}
+        .tk-action.avoid{background:#6b728020;color:var(--mt)}
         .tk-right{text-align:right}
         .tk-price{font-weight:700;font-size:16px}
         .tk-chg{font-size:13px}
+        .tk-target{font-size:11px;color:var(--mt);margin-top:2px}
 
         /* Metrics Grid */
-        .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:1px;background:var(--bd);border-radius:8px;overflow:hidden;margin:0 16px 12px}
-        .metric{background:var(--s3);padding:10px 12px;text-align:center}
-        .metric-val{font-weight:700;font-size:14px}
-        .metric-lbl{font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+        .metrics{display:flex;gap:1px;background:var(--bd);border-radius:8px;overflow:hidden;margin:0 16px 12px}
+        .metric{background:var(--s3);padding:8px 10px;text-align:center;flex:1;min-width:0}
+        .metric-val{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .metric-lbl{font-size:9px;color:var(--mt);text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
 
         /* Analysis Text */
         .analysis{padding:0 16px 14px;font-size:13px;line-height:1.7;color:var(--mt)}
         .analysis strong{color:var(--tx)}
+
+        /* Price Chart */
+        .tk-chart{padding:4px 16px 12px}
+        .tk-chart canvas{width:100%!important;height:200px!important;border-radius:8px}
+        .chart-legend{display:flex;gap:12px;justify-content:center;padding:6px 0;font-size:10px;color:var(--mt)}
+        .chart-legend span{display:flex;align-items:center;gap:4px}
+        .chart-legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 
         /* Chain Context */
         .tk-ctx{padding:8px 16px 12px;font-size:11px;color:var(--mt);display:flex;gap:8px;align-items:center;border-top:1px solid var(--bd)}
@@ -78,18 +92,32 @@
         .pipe-tickers{display:flex;flex-wrap:wrap;gap:6px}
         .pipe-tk{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg);display:flex;align-items:center;gap:4px}
         .pipe-tk .s{font-weight:700;color:var(--ac)}
+        .pipe-tk .upside{font-weight:700;margin-left:2px}
 
         /* Suggestions */
-        .sugg{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-        .sugg-pill{padding:10px 16px;border-radius:20px;border:1px solid var(--bd);background:var(--s1);cursor:pointer;font-size:13px;transition:all .2s}
+        .sugg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+        .sugg-pill{padding:8px 14px;border-radius:16px;border:1px solid var(--bd);background:var(--s1);cursor:pointer;font-size:12px;transition:all .2s;max-width:100%}
         .sugg-pill:hover{border-color:var(--ac);transform:translateY(-1px)}
 
         /* Signal Cards */
-        .sig-card{background:var(--s2);border-radius:10px;padding:14px;margin-bottom:8px;border-left:3px solid var(--pu)}
-        .sig-title{font-size:14px;font-weight:600;margin-bottom:4px}
-        .sig-meta{font-size:11px;color:var(--mt);margin-bottom:6px}
-        .sig-picks{display:flex;gap:6px;flex-wrap:wrap}
-        .sig-pick{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg)}
+        .sig-card{background:var(--s2);border-radius:8px;padding:10px 12px;margin-bottom:6px;border-left:3px solid var(--pu);cursor:pointer;transition:border-color .2s}
+        .sig-card:hover{border-left-color:var(--ac)}
+        .sig-top{display:flex;align-items:center;gap:10px}
+        .sig-body{flex:1;min-width:0}
+        .sig-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .sig-meta{font-size:10px;color:var(--mt)}
+        .sig-summary{font-size:11px;color:var(--mt);margin-top:4px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .sig-picks{display:flex;gap:4px;flex-shrink:0}
+        .sig-pick{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg)}
+        .sig-chains{display:flex;gap:4px;margin-top:4px}
+        .sig-chain{font-size:9px;padding:1px 6px;border-radius:10px;border:1px solid;opacity:.8}
+
+        /* Intro features */
+        .intro-features{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+        .intro-feat{background:var(--s2);border-radius:8px;padding:10px 12px;border:1px solid var(--bd)}
+        .intro-feat-icon{font-size:16px;margin-bottom:4px}
+        .intro-feat-title{font-size:11px;font-weight:700;margin-bottom:2px}
+        .intro-feat-desc{font-size:10px;color:var(--mt);line-height:1.4}
 
         /* Input */
         .input-bar{padding:12px 20px;background:var(--s1);border-top:1px solid var(--bd);flex-shrink:0}
@@ -122,8 +150,25 @@
     <div class="msg msg-a">
         <div class="lbl">ThetaFlow</div>
         <div class="bub">
-            <div style="font-size:20px;font-weight:800;margin-bottom:8px;">Map Events to Investment Opportunities ⚡</div>
-            <p style="color:var(--mt);margin-bottom:16px;">Paste a headline or pick a scenario. I'll trace the impact through the full value chain — from power generation to SaaS — with real financial analysis.</p>
+            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Investment Intelligence ⚡</div>
+            <p style="color:var(--mt);margin-bottom:14px;font-size:13px">Enter any market event. I'll build the value chain, identify affected tickers, and project 30-day price impact with actionable recommendations.</p>
+            <div class="intro-features">
+                <div class="intro-feat">
+                    <div class="intro-feat-icon">🔗</div>
+                    <div class="intro-feat-title">Dynamic Chains</div>
+                    <div class="intro-feat-desc">AI maps the full supply chain — any sector, any event</div>
+                </div>
+                <div class="intro-feat">
+                    <div class="intro-feat-icon">📊</div>
+                    <div class="intro-feat-title">Price Projections</div>
+                    <div class="intro-feat-desc">6-month history + 30-day volatility cone per ticker</div>
+                </div>
+                <div class="intro-feat">
+                    <div class="intro-feat-icon">🎯</div>
+                    <div class="intro-feat-title">Action Signals</div>
+                    <div class="intro-feat-desc">BUY / SELL / WATCH with conviction % and risk/reward</div>
+                </div>
+            </div>
             <div class="sugg" id="sugg"></div>
         </div>
     </div>
@@ -144,8 +189,6 @@ const SUGG=[
     {i:'🤖',t:'What if NVIDIA beats earnings by 20%?'},
     {i:'⚛️',t:'New nuclear power plant approved for AI data centers'},
     {i:'💊',t:'Eli Lilly GLP-1 drug gets FDA fast-track approval'},
-    {i:'🔒',t:'Major ransomware attack hits US healthcare system'},
-    {i:'⚡',t:'Congress passes $50B clean energy infrastructure bill'},
     {i:'🏭',t:'TSMC announces $100B investment in US chip fabs'},
 ];
 
@@ -155,13 +198,14 @@ document.getElementById('sugg').innerHTML=SUGG.map(s=>`<div class="sugg-pill" on
 // Load real headlines as suggestions
 (async()=>{
     try{
-        const r=await fetch(`${API}/signals?hours=72&limit=6`);
+        const r=await fetch(`${API}/signals?hours=72&limit=4`);
         const d=await r.json();
-        if(d.success&&d.signals.length>=3){
+        if(d.success&&d.signals.length>=2){
             const el=document.getElementById('sugg');
-            el.innerHTML=d.signals.map(s=>{
-                const title=s.title.length>80?s.title.substring(0,77)+'...':s.title;
-                return `<div class="sugg-pill" onclick="pick('${title.replace(/'/g,"\\'")}')" style="border-left:3px solid ${s.chains?.[0]?.theme_color||'var(--bd)'}">📰 ${title}</div>`;
+            const srcIcon=s=>s.source==='wsj'?'📰':'💡';
+            el.innerHTML=d.signals.slice(0,3).map(s=>{
+                const title=s.title.length>70?s.title.substring(0,67)+'...':s.title;
+                return `<div class="sugg-pill" onclick="pick('${title.replace(/'/g,"\\'")}')" style="border-left:3px solid ${s.chains?.[0]?.theme_color||'var(--bd)'}">${srcIcon(s)} ${title}</div>`;
             }).join('')+SUGG.slice(0,2).map(s=>`<div class="sugg-pill" onclick="pick('${s.t.replace(/'/g,"\\'")}')">${s.i} ${s.t}</div>`).join('');
         }
     }catch(e){}
@@ -216,37 +260,58 @@ function renderAnalysis(d){
             const chgCls=(t.change_pct||0)>=0?'positive':'negative';
             const chgStr=t.current_price?`${t.change_pct>=0?'+':''}${t.change_pct.toFixed(1)}%`:'';
             const prStr=t.current_price?`$${t.current_price.toFixed(2)}`:'';
-            const hzCls=t.time_horizon==='immediate'?'imm':t.time_horizon==='short_term'?'short':'med';
+            const hzCls=(t.time_horizon||'')==='immediate'?'imm':(t.time_horizon||'')==='short_term'?'short':'med';
+
+            // Compute projected 30d upside from conviction (used in header + metrics)
+            const projSign=t.direction==='bullish'?1:-1;
+            const proj30d=((Math.exp(projSign*t.conviction*0.003*22)-1)*100);
 
             h+=`<div class="tk-card">`;
-            // Header
+            // Header with action badge
+            const action=(t.action||'').toUpperCase()||( t.direction==='bullish'?(t.conviction>.6?'BUY':'WATCH'):(t.conviction>.6?'SHORT':'AVOID'));
+            const actionCls=action==='BUY'?'buy':action==='SHORT'||action==='SELL'?'sell':action==='WATCH'?'watch':'avoid';
+            const targetPrice=t.current_price?(t.current_price*(1+proj30d/100)).toFixed(2):null;
+            const rr=t.risk_reward||null;
+
             h+=`<div class="tk-head">
                 <div class="tk-left">
                     <div class="tk-dir ${t.direction==='bullish'?'bull':'bear'}"></div>
                     <span class="tk-sym">${t.ticker}</span>
+                    <span class="tk-action ${actionCls}">${action}</span>
                     <span class="tk-name">${t.company}</span>
                 </div>
                 <div class="tk-right">
                     <div class="tk-price">${prStr}</div>
                     <div class="tk-chg ${chgCls}">${chgStr}</div>
+                    ${targetPrice?`<div class="tk-target">Target $${targetPrice}${rr?' · R/R '+rr:''}</div>`:''}
                 </div>
             </div>`;
 
-            // Metrics grid
+            // Metrics grid — compact: max 5 key metrics + projected upside
             const mets=[];
+            mets.push({v:(proj30d>=0?'+':'')+proj30d.toFixed(1)+'%',l:'30d Projected',c:proj30d>=0?'var(--gn)':'var(--rd)'});
             if(f.market_cap)mets.push({v:f.market_cap,l:'Mkt Cap'});
             if(f.pe_forward)mets.push({v:f.pe_forward+'x',l:'Fwd P/E'});
-            if(f.pe_trailing)mets.push({v:f.pe_trailing+'x',l:'P/E TTM'});
-            if(f.revenue_growth!=null)mets.push({v:(f.revenue_growth>0?'+':'')+f.revenue_growth+'%',l:'Rev Growth',c:f.revenue_growth>=0?'var(--gn)':'var(--rd)'});
-            if(f.profit_margin!=null)mets.push({v:f.profit_margin+'%',l:'Margin'});
-            if(f.analyst_upside_pct!=null)mets.push({v:(f.analyst_upside_pct>0?'+':'')+f.analyst_upside_pct+'%',l:'Analyst Target',c:f.analyst_upside_pct>=0?'var(--gn)':'var(--rd)'});
-            if(f.distance_from_high_pct!=null)mets.push({v:f.distance_from_high_pct+'%',l:'From 52w High'});
+            if(f.distance_from_high_pct!=null)mets.push({v:f.distance_from_high_pct+'%',l:'52w High'});
             if(f.beta)mets.push({v:f.beta,l:'Beta'});
 
             if(mets.length){
                 h+='<div class="metrics">';
                 mets.forEach(m=>h+=`<div class="metric"><div class="metric-val"${m.c?` style="color:${m.c}"`:``}>${m.v}</div><div class="metric-lbl">${m.l}</div></div>`);
                 h+='</div>';
+            }
+
+            // Price chart
+            if(t.chart_data){
+                const chartId='chart_'+t.ticker+'_'+Date.now();
+                h+=`<div class="tk-chart">
+                    <canvas id="${chartId}" height="200"></canvas>
+                    <div class="chart-legend">
+                        <span><span class="dot" style="background:#6366f1"></span> Price History</span>
+                        <span><span class="dot" style="background:${t.direction==='bullish'?'#10b981':'#ef4444'}"></span> Projection (${(t.conviction*100).toFixed(0)}% conv.)</span>
+                        <span><span class="dot" style="background:#f59e0b"></span> Event Date</span>
+                    </div>
+                </div>`;
             }
 
             // Analysis
@@ -256,9 +321,9 @@ function renderAnalysis(d){
 
             // Context bar
             h+=`<div class="tk-ctx">
-                <span class="ctx-badge ${hzCls}">${t.time_horizon.replace('_',' ')}</span>
-                <span>${t.chain_name} → ${t.layer}</span>
-                <span style="margin-left:auto">${t.exposure} exposure</span>
+                <span class="ctx-badge ${hzCls}">${(t.time_horizon||'short_term').replace('_',' ')}</span>
+                <span>${t.chain_name||''} → ${t.layer||''}</span>
+                <span style="margin-left:auto">${t.exposure||'medium'} exposure</span>
             </div>`;
             h+='</div>';
         });
@@ -284,7 +349,7 @@ function renderAnalysis(d){
         h+='<div style="margin-top:12px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ac)"><span style="width:6px;height:6px;background:var(--ac);border-radius:50%;display:inline-block"></span> Analysis powered by Claude AI</div>';
     }
 
-    // Pipeline visualization
+    // Pipeline visualization with projected upside
     if(d.recommendations?.length){
         const byChain={};
         d.recommendations.forEach(r=>{
@@ -293,16 +358,18 @@ function renderAnalysis(d){
             byChain[r.chain_name][r.layer].push(r);
         });
         for(const[cn,layers] of Object.entries(byChain)){
-            h+=`<div class="pipeline"><div class="pipe-title">⛓️ ${cn} Value Chain</div>`;
+            h+=`<div class="pipeline"><div class="pipe-title">⛓️ ${cn}</div>`;
             for(const[ln,tks] of Object.entries(layers)){
                 h+=`<div class="pipe-layer"><div class="pipe-dot"></div><div class="pipe-content">
                     <div class="pipe-layer-name">${ln}</div>
                     <div class="pipe-tickers">`;
                 tks.forEach(t=>{
                     const p=t.current_price?`$${t.current_price.toFixed(0)}`:'';
-                    const c=(t.change_pct||0)>=0?'positive':'negative';
-                    const cs=t.current_price?`${t.change_pct>=0?'+':''}${t.change_pct.toFixed(1)}%`:'';
-                    h+=`<div class="pipe-tk"><span class="s">${t.ticker}</span> ${p} <span class="${c}">${cs}</span></div>`;
+                    const sign=t.direction==='bullish'?1:-1;
+                    const upside=((Math.exp(sign*(t.conviction||0.5)*0.003*22)-1)*100);
+                    const upsideStr=(upside>=0?'+':'')+upside.toFixed(1)+'%';
+                    const upsideClr=upside>=0?'var(--gn)':'var(--rd)';
+                    h+=`<div class="pipe-tk"><span class="s">${t.ticker}</span> ${p} <span class="upside" style="color:${upsideClr}">${upsideStr}</span></div>`;
                 });
                 h+='</div></div></div>';
             }
@@ -314,6 +381,166 @@ function renderAnalysis(d){
     h+='</div></div>';
     document.getElementById('msgs').insertAdjacentHTML('beforeend',h);
     scrollEnd();
+
+    // Initialize charts after DOM insertion
+    if(d.top_picks?.length && typeof Chart !== 'undefined'){
+        d.top_picks.forEach(t=>{
+            if(t.chart_data){
+                const el=document.querySelector(`[id^="chart_${t.ticker}_"]`);
+                if(el) renderTickerChart(el.id, t);
+            }
+        });
+    }
+}
+
+function renderTickerChart(canvasId, tickerData){
+    const ctx=document.getElementById(canvasId);
+    if(!ctx) return;
+
+    const cd=tickerData.chart_data;
+    const hist=cd.history;
+    const proj=cd.projection;
+    const isBull=tickerData.direction==='bullish';
+    const projColor=isBull?'#10b981':'#ef4444';
+
+    const allLabels=[...hist.dates];
+    if(proj) allLabels.push(...proj.dates);
+
+    const datasets=[];
+
+    // Historical price line
+    datasets.push({
+        label:'Price',
+        data:hist.closes.map((v,i)=>({x:hist.dates[i],y:v})),
+        borderColor:'#6366f1',
+        backgroundColor:'transparent',
+        borderWidth:2,
+        pointRadius:0,
+        pointHitRadius:8,
+        tension:0.1,
+        order:2,
+    });
+
+    if(proj){
+        // Projection center line (dashed)
+        datasets.push({
+            label:'Projected',
+            data:proj.center.map((v,i)=>({x:proj.dates[i],y:v})),
+            borderColor:projColor,
+            borderWidth:2,
+            borderDash:[6,3],
+            pointRadius:0,
+            tension:0.1,
+            order:3,
+        });
+
+        // 1-sigma cone (inner)
+        datasets.push({
+            label:'+1\u03c3',
+            data:proj.upper_1sd.map((v,i)=>({x:proj.dates[i],y:v})),
+            borderColor:'transparent',
+            backgroundColor:'transparent',
+            pointRadius:0,
+            fill:false,
+            order:4,
+        });
+        datasets.push({
+            label:'-1\u03c3',
+            data:proj.lower_1sd.map((v,i)=>({x:proj.dates[i],y:v})),
+            borderColor:'transparent',
+            backgroundColor:isBull?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)',
+            pointRadius:0,
+            fill:'-1',
+            order:5,
+        });
+
+        // 2-sigma cone (outer)
+        datasets.push({
+            label:'+2\u03c3',
+            data:proj.upper_2sd.map((v,i)=>({x:proj.dates[i],y:v})),
+            borderColor:'transparent',
+            backgroundColor:'transparent',
+            pointRadius:0,
+            fill:false,
+            order:6,
+        });
+        datasets.push({
+            label:'-2\u03c3',
+            data:proj.lower_2sd.map((v,i)=>({x:proj.dates[i],y:v})),
+            borderColor:'transparent',
+            backgroundColor:isBull?'rgba(16,185,129,0.07)':'rgba(239,68,68,0.07)',
+            pointRadius:0,
+            fill:'-1',
+            order:7,
+        });
+    }
+
+    const eventDate=hist.dates[hist.dates.length-1];
+
+    new Chart(ctx,{
+        type:'line',
+        data:{datasets},
+        options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            interaction:{mode:'index',intersect:false},
+            plugins:{
+                legend:{display:false},
+                tooltip:{
+                    backgroundColor:'#1a2234',
+                    titleColor:'#e5e7eb',
+                    bodyColor:'#9ca3af',
+                    borderColor:'#1f2937',
+                    borderWidth:1,
+                    callbacks:{
+                        label:function(context){
+                            if(context.dataset.label==='Price'||context.dataset.label==='Projected')
+                                return context.dataset.label+': $'+context.parsed.y.toFixed(2);
+                            return null;
+                        }
+                    }
+                },
+            },
+            scales:{
+                x:{
+                    type:'category',
+                    labels:allLabels,
+                    grid:{color:'rgba(31,41,55,0.5)',drawTicks:false},
+                    ticks:{color:'#4b5563',font:{size:9},maxTicksLimit:8,maxRotation:0},
+                    border:{display:false},
+                },
+                y:{
+                    grid:{color:'rgba(31,41,55,0.5)',drawTicks:false},
+                    ticks:{color:'#4b5563',font:{size:10},callback:v=>'$'+v.toFixed(0)},
+                    border:{display:false},
+                }
+            }
+        },
+        plugins:[{
+            id:'eventMarker',
+            afterDraw(chart){
+                const xScale=chart.scales.x;
+                const yScale=chart.scales.y;
+                const xPos=xScale.getPixelForValue(eventDate);
+                if(xPos){
+                    const c=chart.ctx;
+                    c.save();
+                    c.beginPath();
+                    c.setLineDash([4,4]);
+                    c.strokeStyle='#f59e0b';
+                    c.lineWidth=1.5;
+                    c.moveTo(xPos,yScale.top);
+                    c.lineTo(xPos,yScale.bottom);
+                    c.stroke();
+                    c.fillStyle='#f59e0b';
+                    c.font='9px -apple-system,sans-serif';
+                    c.textAlign='center';
+                    c.fillText('EVENT',xPos,yScale.top-4);
+                    c.restore();
+                }
+            }
+        }]
+    });
 }
 
 async function send(){
@@ -339,13 +566,25 @@ async function loadSigs(){
         const r=await fetch(`${API}/signals?hours=72&limit=4`);
         const d=await r.json();
         if(!d.success||!d.signals.length)return;
-        let h='<div class="msg msg-a"><div class="lbl">ThetaFlow · Live Feed</div><div class="bub">';
-        h+=`<div style="font-weight:700;margin-bottom:10px">📡 ${d.count} catalysts detected in the last 72 hours</div>`;
+        let h='<div class="msg msg-a"><div class="lbl">ThetaFlow · Market Activity</div><div class="bub">';
+        h+=`<div style="font-weight:600;margin-bottom:8px;font-size:13px">📡 ${d.count} catalyst${d.count!==1?'s':''} detected — click any to analyze</div>`;
         d.signals.forEach(s=>{
-            const sev=s.severity==='high'?'🔴':'🟡';
-            const chains=(s.chains||[]).map(c=>`<span class="chain-pill" style="border-color:${c.theme_color||'var(--bd)'};color:${c.theme_color||'var(--mt)'};font-size:10px;padding:2px 8px">${c.chain_name}</span>`).join(' ');
-            const picks=(s.top_picks||[]).map(t=>`<span class="sig-pick"><strong style="color:var(--ac)">${t.ticker}</strong> ${(t.conviction*100).toFixed(0)}%</span>`).join('');
-            h+=`<div class="sig-card"><div class="sig-title">${sev} ${s.title}</div><div class="sig-meta">${s.source} · ${ago(s.timestamp)}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${chains}</div><div class="sig-picks">${picks}</div></div>`;
+            const srcLabel=s.source==='wsj'?'WSJ':s.source==='newsapi'?'News':s.source==='sec_edgar'?'SEC':s.source;
+            const picks=(s.top_picks||[]).slice(0,3).map(t=>{
+                const dir=(t.direction||'bullish')==='bullish';
+                return `<span class="sig-pick"><strong style="color:var(--ac)">${t.ticker}</strong> <span style="color:${dir?'var(--gn)':'var(--rd)'}">${dir?'↑':'↓'}</span></span>`;
+            }).join('');
+            const title=s.title.length>90?s.title.substring(0,87)+'...':s.title;
+            const chains=(s.chains||[]).slice(0,2).map(c=>`<span class="sig-chain" style="border-color:${c.theme_color||'var(--bd)'};color:${c.theme_color||'var(--mt)'}">${c.chain_name}</span>`).join('');
+            const summary=(s.summary||'').length>120?s.summary.substring(0,117)+'...':s.summary||'';
+            h+=`<div class="sig-card" onclick="pick('${title.replace(/'/g,"\\'")}')">
+                <div class="sig-top">
+                    <div class="sig-body"><div class="sig-title">${title}</div><div class="sig-meta">${srcLabel} · ${ago(s.timestamp)}</div></div>
+                    <div class="sig-picks">${picks}</div>
+                </div>
+                ${summary?`<div class="sig-summary">${summary}</div>`:''}
+                ${chains?`<div class="sig-chains">${chains}</div>`:''}
+            </div>`;
         });
         h+='</div></div>';
         document.getElementById('msgs').insertAdjacentHTML('beforeend',h);scrollEnd();

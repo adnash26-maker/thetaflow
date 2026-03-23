@@ -14,6 +14,7 @@ import json
 import logging
 import sqlite3
 import re
+import time
 import uuid
 import hashlib
 import secrets
@@ -148,9 +149,10 @@ def get_signals():
     limit = request.args.get("limit", 10, type=int)
 
     events = db.get_recent_events(hours=hours, limit=50)
-    # Prioritize news headlines over SEC filings for better readability
-    events.sort(key=lambda e: (0 if e.get("source") == "newsapi" else 1, e.get("timestamp", "")), reverse=False)
-    events.sort(key=lambda e: e.get("source") == "newsapi", reverse=True)
+    # Prioritize WSJ and news headlines over SEC filings
+    priority = {"wsj": 0, "newsapi": 1, "fred": 2, "sec_edgar": 3, "yahoo": 4}
+    events.sort(key=lambda e: (priority.get(e.get("source", ""), 5), e.get("timestamp", "")), reverse=False)
+    events.sort(key=lambda e: priority.get(e.get("source", ""), 5))
     signals = []
 
     for event in events:
@@ -194,67 +196,164 @@ def get_signals():
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze_event_endpoint():
-    """Analyze a news headline with AI-powered contextual reasoning."""
+    """Analyze a news headline with AI-powered dynamic value chain generation."""
+    from financial_data import get_full_financials, get_ticker_chart_data
+
     data = request.json or {}
     headline = data.get("headline", "").strip()
     if not headline:
         return jsonify({"error": "headline is required"}), 400
 
     event_type = data.get("event_type", "news")
+    analysis = None
 
-    # Step 1: Get chain matches and ticker recommendations from impact engine
-    analysis = engine.analyze_event(headline, event_type)
-
-    # Step 2: If Claude is available, generate real contextual analysis
-    if analyst.available and analysis.get("chains_matched", 0) > 0:
+    # ── Primary path: Dynamic AI-generated chains ──
+    if analyst.available:
         try:
-            # Build ticker data for Claude
-            ticker_data = []
-            for t in analysis.get("top_picks", [])[:5]:
-                ticker_data.append({
-                    "ticker": t["ticker"],
-                    "company": t["company"],
-                    "current_price": t.get("current_price", 0),
-                    "change_pct": t.get("change_pct", 0),
-                    "chain_name": t.get("chain_name", ""),
-                    "layer": t.get("layer", ""),
-                    "exposure": t.get("exposure", ""),
-                    "thesis": t.get("thesis", ""),
-                    "financials": t.get("financials", {}),
-                })
-
-            ai_result = analyst.analyze_event(
-                headline,
-                analysis.get("chains", []),
-                ticker_data
-            )
-
-            # Merge AI analysis into the response
-            if ai_result.get("summary"):
-                analysis["summary"] = ai_result["summary"]
-            if ai_result.get("risk_factors"):
-                analysis["risk_factors"] = ai_result["risk_factors"]
-            if ai_result.get("contrarian_view"):
-                analysis["contrarian_view"] = ai_result["contrarian_view"]
-            if ai_result.get("time_horizon"):
-                analysis["ai_time_horizon"] = ai_result["time_horizon"]
-
-            # Merge per-ticker AI analysis into top_picks
-            ticker_analyses = ai_result.get("ticker_analyses", {})
-            for pick in analysis.get("top_picks", []):
-                ai_text = ticker_analyses.get(pick["ticker"])
-                if ai_text:
-                    pick["investment_analysis"] = ai_text
-
-            analysis["ai_powered"] = True
-
+            ai_result = analyst.generate_dynamic_chains(headline)
+            if ai_result and ai_result.get("top_picks"):
+                analysis = _enrich_dynamic_result(ai_result, headline)
+                analysis["ai_powered"] = True
+                analysis["dynamic_chains"] = True
         except Exception as e:
-            logger.error(f"AI analysis enhancement failed: {e}")
+            logger.error(f"Dynamic chain generation failed, falling back: {e}")
+
+    # ── Fallback path: Pre-built chain matching ──
+    if analysis is None:
+        analysis = engine.analyze_event(headline, event_type)
+
+        if analyst.available and analysis.get("chains_matched", 0) > 0:
+            try:
+                ticker_data = []
+                for t in analysis.get("top_picks", [])[:5]:
+                    ticker_data.append({
+                        "ticker": t["ticker"], "company": t["company"],
+                        "current_price": t.get("current_price", 0),
+                        "change_pct": t.get("change_pct", 0),
+                        "chain_name": t.get("chain_name", ""),
+                        "layer": t.get("layer", ""),
+                        "exposure": t.get("exposure", ""),
+                        "thesis": t.get("thesis", ""),
+                        "financials": t.get("financials", {}),
+                    })
+                ai_text = analyst.analyze_event(headline, analysis.get("chains", []), ticker_data)
+                if ai_text.get("summary"):
+                    analysis["summary"] = ai_text["summary"]
+                if ai_text.get("risk_factors"):
+                    analysis["risk_factors"] = ai_text["risk_factors"]
+                if ai_text.get("contrarian_view"):
+                    analysis["contrarian_view"] = ai_text["contrarian_view"]
+                if ai_text.get("time_horizon"):
+                    analysis["ai_time_horizon"] = ai_text["time_horizon"]
+                ticker_analyses = ai_text.get("ticker_analyses", {})
+                for pick in analysis.get("top_picks", []):
+                    ai_t = ticker_analyses.get(pick["ticker"])
+                    if ai_t:
+                        pick["investment_analysis"] = ai_t
+                analysis["ai_powered"] = True
+            except Exception:
+                analysis["ai_powered"] = False
+        else:
             analysis["ai_powered"] = False
-    else:
-        analysis["ai_powered"] = False
+
+        # Add chart data to fallback picks
+        _add_chart_data_to_picks(analysis.get("top_picks", []))
+        analysis["dynamic_chains"] = False
 
     return jsonify({"success": True, **analysis})
+
+
+def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
+    """Enrich Claude's dynamic chain result with live financial data and charts."""
+    from financial_data import get_full_financials, get_ticker_chart_data
+
+    seen_tickers = set()
+    valid_picks = []
+
+    all_picks = ai_result.get("top_picks", []) + [
+        r for r in ai_result.get("recommendations", [])
+        if r.get("ticker") not in {p.get("ticker") for p in ai_result.get("top_picks", [])}
+    ]
+
+    for pick in all_picks:
+        ticker = pick.get("ticker", "").upper()
+        if not ticker or ticker in seen_tickers or len(ticker) > 5:
+            continue
+
+        fin = get_full_financials(ticker)
+        if fin is None:
+            logger.warning(f"Ticker {ticker} not found on Yahoo Finance, skipping")
+            continue
+
+        seen_tickers.add(ticker)
+
+        pick["current_price"] = fin.get("price", 0)
+        pick["change_pct"] = fin.get("change_pct", 0)
+        pick["financials"] = {
+            "market_cap": fin.get("market_cap_str"),
+            "pe_forward": fin.get("pe_forward"),
+            "pe_trailing": fin.get("pe_trailing"),
+            "revenue_growth": fin.get("revenue_growth"),
+            "profit_margin": fin.get("profit_margin"),
+            "fifty_two_high": fin.get("fifty_two_high"),
+            "fifty_two_low": fin.get("fifty_two_low"),
+            "distance_from_high_pct": fin.get("distance_from_high_pct"),
+            "beta": fin.get("beta"),
+        }
+
+        pick["investment_analysis"] = pick.get("thesis", "")
+
+        # Chart data for top 5 only
+        if len(valid_picks) < 5:
+            chart = get_ticker_chart_data(
+                ticker,
+                direction=pick.get("direction", "bullish"),
+                conviction=pick.get("conviction", 0.5)
+            )
+            if chart:
+                pick["chart_data"] = chart
+
+        valid_picks.append(pick)
+
+        if len(seen_tickers) >= 8:
+            time.sleep(0.3)
+
+    all_valid = sorted(
+        valid_picks,
+        key=lambda t: t.get("conviction", 0) * t.get("impact_score", 0),
+        reverse=True
+    )
+
+    return {
+        "headline": headline,
+        "event_type": "news",
+        "chains_matched": len(ai_result.get("chains", [])),
+        "chains": ai_result.get("chains", []),
+        "top_picks": all_valid[:5],
+        "recommendations": all_valid,
+        "summary": ai_result.get("summary", ""),
+        "risk_factors": ai_result.get("risk_factors", []),
+        "contrarian_view": ai_result.get("contrarian_view", ""),
+        "ai_time_horizon": ai_result.get("time_horizon", ""),
+        "analyzed_at": datetime.utcnow().isoformat(),
+    }
+
+
+def _add_chart_data_to_picks(picks):
+    """Add chart data to ticker picks (fallback path)."""
+    from financial_data import get_ticker_chart_data
+
+    for pick in (picks or [])[:5]:
+        ticker = pick.get("ticker")
+        if not ticker:
+            continue
+        chart = get_ticker_chart_data(
+            ticker,
+            direction=pick.get("direction", "bullish"),
+            conviction=pick.get("conviction", 0.5)
+        )
+        if chart:
+            pick["chart_data"] = chart
 
 @app.route("/api/events", methods=["GET"])
 def get_events():
