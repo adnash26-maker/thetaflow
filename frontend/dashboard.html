@@ -111,18 +111,7 @@
         .sugg-pill{padding:8px 14px;border-radius:16px;border:1px solid var(--bd);background:var(--s1);cursor:pointer;font-size:12px;transition:all .2s;max-width:100%}
         .sugg-pill:hover{border-color:var(--ac);transform:translateY(-1px)}
 
-        /* Signal Cards */
-        .sig-card{background:var(--s2);border-radius:8px;padding:10px 12px;margin-bottom:6px;border-left:3px solid var(--pu);cursor:pointer;transition:border-color .2s}
-        .sig-card:hover{border-left-color:var(--ac)}
-        .sig-top{display:flex;align-items:center;gap:10px}
-        .sig-body{flex:1;min-width:0}
-        .sig-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .sig-meta{font-size:10px;color:var(--mt)}
-        .sig-summary{font-size:11px;color:var(--mt);margin-top:4px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-        .sig-picks{display:flex;gap:4px;flex-shrink:0}
-        .sig-pick{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg)}
-        .sig-chains{display:flex;gap:4px;margin-top:4px}
-        .sig-chain{font-size:9px;padding:1px 6px;border-radius:10px;border:1px solid;opacity:.8}
+        /* (Signal card CSS removed — pills ARE the feed now) */
 
         /* Intro features */
         .intro-features{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
@@ -181,6 +170,7 @@
                     <div class="intro-feat-desc">BUY / SHORT / WATCH with entry logic and risk/reward</div>
                 </div>
             </div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:6px" id="sugg-label">Try a scenario</div>
             <div class="sugg" id="sugg"></div>
         </div>
     </div>
@@ -197,30 +187,31 @@
 
 <script>
 const API=location.origin+'/api';
-const SUGG=[
-    {i:'🤖',t:'What if NVIDIA beats earnings by 20%?'},
-    {i:'⚛️',t:'New nuclear power plant approved for AI data centers'},
-    {i:'💊',t:'Eli Lilly GLP-1 drug gets FDA fast-track approval'},
-    {i:'🏭',t:'TSMC announces $100B investment in US chip fabs'},
+const CATS=[
+    {i:'🖥️',cat:'Technology',t:'What if NVIDIA beats earnings by 20%?'},
+    {i:'📈',cat:'Markets',t:'Fed signals rate cut at next FOMC meeting'},
+    {i:'⚡',cat:'Energy',t:'New nuclear power plant approved for AI data centers'},
+    {i:'💊',cat:'Healthcare',t:'Eli Lilly GLP-1 drug gets FDA fast-track approval'},
 ];
 
-// Show static suggestions first, then replace with real headlines
-document.getElementById('sugg').innerHTML=SUGG.map(s=>`<div class="sugg-pill" onclick="pick('${s.t.replace(/'/g,"\\'")}')">${s.i} ${s.t}</div>`).join('');
+// Show categorized static suggestions first
+document.getElementById('sugg').innerHTML=CATS.map(s=>`<div class="sugg-pill" onclick="pick('${s.t.replace(/'/g,"\\'")}')" style="border-left:3px solid var(--bd)"><span style="font-size:9px;font-weight:700;color:var(--mt);margin-right:4px">${s.cat}</span> ${s.i} ${s.t}</div>`).join('');
 
-// Load real headlines as suggestions
+// Replace with live WSJ/news headlines — one per category
 (async()=>{
     try{
-        const r=await fetch(`${API}/signals?hours=72&limit=4`);
+        const r=await fetch(`${API}/top-headlines`);
         const d=await r.json();
-        if(d.success&&d.signals.length>=2){
+        if(d.success&&d.headlines?.length>=2){
             const el=document.getElementById('sugg');
-            const srcIcon=s=>s.source==='wsj'?'📰':'💡';
-            el.innerHTML=d.signals.slice(0,3).map(s=>{
-                const title=s.title.length>70?s.title.substring(0,67)+'...':s.title;
-                return `<div class="sugg-pill" onclick="pick('${title.replace(/'/g,"\\'")}')" style="border-left:3px solid ${s.chains?.[0]?.theme_color||'var(--bd)'}">${srcIcon(s)} ${title}</div>`;
-            }).join('')+SUGG.slice(0,2).map(s=>`<div class="sugg-pill" onclick="pick('${s.t.replace(/'/g,"\\'")}')">${s.i} ${s.t}</div>`).join('');
+            const lbl=document.getElementById('sugg-label');
+            lbl.innerHTML='Live headlines <span style="color:var(--cy)">●</span>';
+            el.innerHTML=d.headlines.map(h=>{
+                const title=h.title.length>60?h.title.substring(0,57)+'...':h.title;
+                return `<div class="sugg-pill" onclick="pick('${title.replace(/'/g,"\\'")}')" style="border-left:3px solid ${h.color||'var(--bd)'}"><span style="font-size:9px;font-weight:700;color:var(--mt);margin-right:4px">${h.category}</span> ${title}</div>`;
+            }).join('');
         }
-    }catch(e){}
+    }catch(e){console.debug('top-headlines not available, using static')}
 })();
 
 function pick(t){document.getElementById('inp').value=t;send()}
@@ -589,37 +580,6 @@ async function send(){
     document.getElementById('sendBtn').disabled=false;
 }
 
-// Load signals
-async function loadSigs(){
-    try{
-        const r=await fetch(`${API}/signals?hours=72&limit=4`);
-        const d=await r.json();
-        if(!d.success||!d.signals.length)return;
-        let h='<div class="msg msg-a"><div class="lbl">ThetaFlow · Market Activity</div><div class="bub">';
-        h+=`<div style="font-weight:600;margin-bottom:8px;font-size:13px">📡 ${d.count} catalyst${d.count!==1?'s':''} detected — click any to analyze</div>`;
-        d.signals.forEach(s=>{
-            const srcLabel=s.source==='wsj'?'WSJ':s.source==='newsapi'?'News':s.source==='sec_edgar'?'SEC':s.source;
-            const picks=(s.top_picks||[]).slice(0,3).map(t=>{
-                const dir=(t.direction||'bullish')==='bullish';
-                return `<span class="sig-pick"><strong style="color:var(--ac)">${t.ticker}</strong> <span style="color:${dir?'var(--gn)':'var(--rd)'}">${dir?'↑':'↓'}</span></span>`;
-            }).join('');
-            const title=s.title.length>90?s.title.substring(0,87)+'...':s.title;
-            const chains=(s.chains||[]).slice(0,2).map(c=>`<span class="sig-chain" style="border-color:${c.theme_color||'var(--bd)'};color:${c.theme_color||'var(--mt)'}">${c.chain_name}</span>`).join('');
-            const summary=(s.summary||'').length>120?s.summary.substring(0,117)+'...':s.summary||'';
-            h+=`<div class="sig-card" onclick="pick('${title.replace(/'/g,"\\'")}')">
-                <div class="sig-top">
-                    <div class="sig-body"><div class="sig-title">${title}</div><div class="sig-meta">${srcLabel} · ${ago(s.timestamp)}</div></div>
-                    <div class="sig-picks">${picks}</div>
-                </div>
-                ${summary?`<div class="sig-summary">${summary}</div>`:''}
-                ${chains?`<div class="sig-chains">${chains}</div>`:''}
-            </div>`;
-        });
-        h+='</div></div>';
-        document.getElementById('msgs').insertAdjacentHTML('beforeend',h);scrollEnd();
-    }catch(e){}
-}
-
 function ago(ts){const d=(Date.now()-new Date(ts).getTime())/1000;if(d<3600)return`${Math.floor(d/60)}m`;if(d<86400)return`${Math.floor(d/3600)}h`;return`${Math.floor(d/86400)}d`}
 
 // Auth
@@ -629,7 +589,7 @@ function showAuth(){if(user){if(confirm(`${user.email}\nTier: ${user.tier}\n\nSi
 function toggleAuth(){authMode=authMode==='login'?'register':'login';document.getElementById('authT').textContent=authMode==='login'?'Sign In':'Create Account'}
 async function submitAuth(){const e=document.getElementById('aE').value,p=document.getElementById('aP').value;try{const r=await fetch(`${API}/auth/${authMode==='login'?'login':'register'}`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({email:e,password:p})});const d=await r.json();if(d.success||d.user){user=d.user;document.getElementById('authBtn').textContent=d.user.email.split('@')[0];document.getElementById('authM').style.display='none'}}catch(e){}}
 
-loadSigs();checkAuth();document.getElementById('inp').focus();
+checkAuth();document.getElementById('inp').focus();
 </script>
 
 <div style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center" id="authM">

@@ -16,6 +16,7 @@ import sqlite3
 import re
 import time
 import uuid
+import requests
 import hashlib
 import secrets
 from datetime import datetime, timedelta
@@ -140,6 +141,42 @@ def get_chain_detail(chain_id):
     if "error" in analysis:
         return jsonify({"success": False, "error": analysis["error"]}), 404
     return jsonify({"success": True, **analysis})
+
+@app.route("/api/top-headlines", methods=["GET"])
+def get_top_headlines():
+    """Get one top headline per major category from WSJ RSS feeds."""
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+
+    feeds = {
+        "Technology": {"url": "https://feeds.a.dj.com/rss/RSSWSJD.xml", "color": "#8b5cf6"},
+        "Markets": {"url": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml", "color": "#6366f1"},
+        "Business": {"url": "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml", "color": "#10b981"},
+        "World": {"url": "https://feeds.a.dj.com/rss/RSSWorldNews.xml", "color": "#f59e0b"},
+    }
+
+    headlines = []
+    for category, info in feeds.items():
+        try:
+            resp = requests.get(info["url"], headers={"User-Agent": "ThetaFlow/1.0"}, timeout=6)
+            if resp.status_code != 200:
+                continue
+            root = ET.fromstring(resp.content)
+            item = root.find(".//item")
+            if item is not None:
+                title = (item.findtext("title") or "").strip()
+                if title and len(title) > 15:
+                    headlines.append({
+                        "category": category,
+                        "title": title[:120],
+                        "url": item.findtext("link", ""),
+                        "color": info["color"],
+                        "source": "WSJ",
+                    })
+        except Exception:
+            pass
+
+    return jsonify({"success": True, "headlines": headlines})
 
 @app.route("/api/signals", methods=["GET"])
 def get_signals():
