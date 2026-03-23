@@ -20,117 +20,103 @@ logger = logging.getLogger("thetaflow.financials")
 
 
 def get_full_financials(ticker: str) -> Optional[Dict]:
-    """Pull comprehensive financial data from Yahoo Finance.
-    Uses the quoteSummary endpoint which returns everything in one call."""
+    """Pull financial data by scraping Yahoo Finance public page.
+    The API endpoints require auth now, but the HTML page embeds all data."""
     try:
-        # Yahoo Finance quoteSummary — returns detailed financials
-        url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{ticker}"
-        modules = "price,summaryDetail,defaultKeyStatistics,financialData,earningsTrend"
-        resp = requests.get(url, params={"modules": modules},
-                           headers={"User-Agent": "ThetaFlow/1.0"}, timeout=8)
+        # Step 1: Get price + 52-week from chart API (always works)
+        basic = _get_basic_quote(ticker)
+        if not basic:
+            return None
 
-        if resp.status_code != 200:
-            # Fallback to simpler chart endpoint
-            return _get_basic_quote(ticker)
+        result = {**basic}
 
-        data = resp.json().get("quoteSummary", {}).get("result", [])
-        if not data:
-            return _get_basic_quote(ticker)
+        # Step 2: Scrape key metrics from Yahoo Finance page
+        url = f"https://finance.yahoo.com/quote/{ticker}/"
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+        resp = requests.get(url, headers=headers, timeout=10)
 
-        result = data[0]
-        price = result.get("price", {})
-        summary = result.get("summaryDetail", {})
-        key_stats = result.get("defaultKeyStatistics", {})
-        financials = result.get("financialData", {})
+        if resp.status_code == 200:
+            html = resp.text
 
-        def _val(obj, key, default=None):
-            """Extract 'raw' value from Yahoo's nested format."""
-            v = obj.get(key, {})
-            if isinstance(v, dict):
-                return v.get("raw", v.get("fmt", default))
-            return v if v else default
+            def _scrape_metric(label, html_text):
+                """Extract a metric value from Yahoo's HTML."""
+                import re
+                # Pattern: label text followed by value in next element
+                patterns = [
+                    rf'{label}.*?class="value[^"]*"[^>]*>([^<]+)',
+                    rf'{label}[^<]*</\w+>\s*<\w+[^>]*>([^<]+)',
+                ]
+                for pat in patterns:
+                    m = re.search(pat, html_text, re.IGNORECASE | re.DOTALL)
+                    if m:
+                        val = m.group(1).strip()
+                        return val
+                return None
 
-        current_price = _val(price, "regularMarketPrice", 0)
-        prev_close = _val(price, "regularMarketPreviousClose", current_price)
-        change = round(current_price - prev_close, 2) if current_price and prev_close else 0
-        change_pct = round((change / prev_close * 100), 2) if prev_close else 0
+            def _parse_number(s):
+                if not s or s == 'N/A' or s == '--':
+                    return None
+                s = s.replace(',', '').strip()
+                try:
+                    if 'T' in s:
+                        return float(s.replace('T','')) * 1e12
+                    if 'B' in s:
+                        return float(s.replace('B','')) * 1e9
+                    if 'M' in s:
+                        return float(s.replace('M','')) * 1e6
+                    if '%' in s:
+                        return float(s.replace('%',''))
+                    return float(s)
+                except:
+                    return None
 
-        fifty_two_high = _val(summary, "fiftyTwoWeekHigh", 0)
-        fifty_two_low = _val(summary, "fiftyTwoWeekLow", 0)
-        distance_from_high = round(((current_price - fifty_two_high) / fifty_two_high * 100), 1) if fifty_two_high else 0
+            # Extract key metrics
+            pe_raw = _scrape_metric("PE Ratio", html)
+            fwd_pe_raw = _scrape_metric("Forward P/E", html)
+            mkt_cap_raw = _scrape_metric("Market Cap", html)
+            eps_raw = _scrape_metric("EPS", html)
+            beta_raw = _scrape_metric("Beta", html)
 
-        market_cap = _val(price, "marketCap", 0)
-        market_cap_str = _format_large_number(market_cap) if market_cap else "N/A"
+            pe_val = _parse_number(pe_raw)
+            fwd_pe_val = _parse_number(fwd_pe_raw)
+            mkt_cap_val = _parse_number(mkt_cap_raw)
+            beta_val = _parse_number(beta_raw)
 
-        pe_trailing = _val(summary, "trailingPE")
-        pe_forward = _val(summary, "forwardPE") or _val(key_stats, "forwardPE")
-        peg_ratio = _val(key_stats, "pegRatio")
+            if pe_val:
+                result["pe_trailing"] = round(pe_val, 1)
+            if fwd_pe_val:
+                result["pe_forward"] = round(fwd_pe_val, 1)
+            if mkt_cap_val:
+                result["market_cap"] = mkt_cap_val
+                result["market_cap_str"] = _format_large_number(mkt_cap_val)
+            if beta_val:
+                result["beta"] = round(beta_val, 2)
 
-        revenue_growth = _val(financials, "revenueGrowth")
-        profit_margin = _val(financials, "profitMargins")
-        operating_margin = _val(financials, "operatingMargins")
-        revenue = _val(financials, "totalRevenue")
-        revenue_str = _format_large_number(revenue) if revenue else "N/A"
+            # 52-week data from chart API
+            if result.get("fifty_two_high") and result.get("price"):
+                result["distance_from_high_pct"] = round(
+                    ((result["price"] - result["fifty_two_high"]) / result["fifty_two_high"] * 100), 1
+                )
 
-        target_mean = _val(financials, "targetMeanPrice")
-        target_high = _val(financials, "targetHighPrice")
-        target_low = _val(financials, "targetLowPrice")
-        num_analysts = _val(financials, "numberOfAnalystOpinions")
-        recommendation = _val(financials, "recommendationKey", "none")
-
-        short_ratio = _val(key_stats, "shortRatio")
-        short_pct = _val(key_stats, "shortPercentOfFloat")
-        beta = _val(key_stats, "beta")
-        enterprise_value = _val(key_stats, "enterpriseValue")
-
-        # Upside/downside to analyst target
-        upside_pct = round(((target_mean - current_price) / current_price * 100), 1) if target_mean and current_price else None
-
-        return {
-            "ticker": ticker,
-            "price": round(current_price, 2),
-            "change": change,
-            "change_pct": change_pct,
-            "market_cap": market_cap,
-            "market_cap_str": market_cap_str,
-            "pe_trailing": round(pe_trailing, 1) if pe_trailing else None,
-            "pe_forward": round(pe_forward, 1) if pe_forward else None,
-            "peg_ratio": round(peg_ratio, 2) if peg_ratio else None,
-            "revenue": revenue,
-            "revenue_str": revenue_str,
-            "revenue_growth": round(revenue_growth * 100, 1) if revenue_growth else None,
-            "profit_margin": round(profit_margin * 100, 1) if profit_margin else None,
-            "operating_margin": round(operating_margin * 100, 1) if operating_margin else None,
-            "fifty_two_high": round(fifty_two_high, 2) if fifty_two_high else None,
-            "fifty_two_low": round(fifty_two_low, 2) if fifty_two_low else None,
-            "distance_from_high_pct": distance_from_high,
-            "analyst_target": round(target_mean, 2) if target_mean else None,
-            "analyst_target_high": round(target_high, 2) if target_high else None,
-            "analyst_target_low": round(target_low, 2) if target_low else None,
-            "analyst_count": num_analysts,
-            "analyst_upside_pct": upside_pct,
-            "recommendation": recommendation,
-            "short_ratio": round(short_ratio, 1) if short_ratio else None,
-            "short_pct_float": round(short_pct * 100, 1) if short_pct else None,
-            "beta": round(beta, 2) if beta else None,
-            "enterprise_value": enterprise_value,
-        }
+        return result
     except Exception as e:
         logger.debug(f"Full financials failed for {ticker}: {e}")
         return _get_basic_quote(ticker)
 
 
 def _get_basic_quote(ticker: str) -> Optional[Dict]:
-    """Fallback: basic price data from chart endpoint."""
+    """Basic price + 52-week data from chart endpoint (always works, no auth)."""
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
         resp = requests.get(url, headers={"User-Agent": "ThetaFlow/1.0"},
-                           params={"interval": "1d", "range": "5d"}, timeout=5)
+                           params={"interval": "1d", "range": "1mo"}, timeout=5)
         if resp.status_code != 200:
             return None
         meta = resp.json().get("chart", {}).get("result", [{}])[0].get("meta", {})
         price = meta.get("regularMarketPrice", 0)
         prev = meta.get("chartPreviousClose", price)
+        high52 = meta.get("fiftyTwoWeekHigh")
+        low52 = meta.get("fiftyTwoWeekLow")
         return {
             "ticker": ticker,
             "price": round(price, 2),
@@ -138,6 +124,9 @@ def _get_basic_quote(ticker: str) -> Optional[Dict]:
             "change_pct": round((price - prev) / prev * 100, 2) if prev else 0,
             "market_cap": meta.get("marketCap"),
             "market_cap_str": _format_large_number(meta.get("marketCap", 0)),
+            "fifty_two_high": round(high52, 2) if high52 else None,
+            "fifty_two_low": round(low52, 2) if low52 else None,
+            "volume": meta.get("regularMarketVolume"),
         }
     except:
         return None
