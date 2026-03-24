@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 from dataclasses import dataclass
 
-from financial_data import get_full_financials, generate_investment_thesis
+from financial_data import get_full_financials, get_full_financials_batch, generate_investment_thesis
 
 from value_chains import ALL_CHAINS, ValueChain, ChainNode, find_chains_for_event
 
@@ -246,37 +246,35 @@ class ImpactEngine:
 
     def _enrich_with_financials(self, recs: List[ImpactRecommendation],
                                 headline: str = ""):
-        """Pull full financial data for top recommendations and generate analysis."""
+        """Pull financial data for recommendations using parallel batch fetch."""
         if not recs:
             return
 
-        # Only pull full financials for top 8 to avoid rate limiting
+        # Get unique tickers (top 10)
+        unique_tickers = []
         seen = set()
         for rec in recs:
-            if rec.ticker in seen:
-                # Copy financials from the first instance
-                for prev in recs:
-                    if prev.ticker == rec.ticker and prev.financials:
-                        rec.financials = prev.financials
-                        rec.current_price = prev.current_price
-                        rec.change_pct = prev.change_pct
-                        rec.investment_analysis = prev.investment_analysis
-                        break
-                continue
+            if rec.ticker not in seen:
+                seen.add(rec.ticker)
+                unique_tickers.append(rec.ticker)
+            if len(unique_tickers) >= 10:
+                break
 
-            if len(seen) < 8:
-                fin = get_full_financials(rec.ticker)
-                if fin:
-                    rec.financials = fin
-                    rec.current_price = fin.get("price", 0)
-                    rec.change_pct = fin.get("change_pct", 0)
-                    rec.investment_analysis = generate_investment_thesis(
-                        fin, rec.chain_name, rec.layer, rec.exposure, headline
-                    )
-                    seen.add(rec.ticker)
-                    time.sleep(0.3)
+        # Parallel batch fetch — all tickers at once
+        batch_data = get_full_financials_batch(unique_tickers)
+
+        # Apply financial data to all recommendations
+        for rec in recs:
+            fin = batch_data.get(rec.ticker)
+            if fin:
+                rec.financials = fin
+                rec.current_price = fin.get("price", 0)
+                rec.change_pct = fin.get("change_pct", 0)
+                rec.investment_analysis = generate_investment_thesis(
+                    fin, rec.chain_name, rec.layer, rec.exposure, headline
+                )
             else:
-                # Fallback to DB for remaining tickers
+                # Fallback to DB
                 conn = sqlite3.connect(self.db_path)
                 conn.row_factory = sqlite3.Row
                 row = conn.execute("""

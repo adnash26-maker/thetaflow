@@ -13,104 +13,90 @@ Pulls real financial metrics from Yahoo Finance for investment-grade analysis:
 import logging
 import math
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional
-from functools import lru_cache
 from datetime import datetime, timedelta
 
 logger = logging.getLogger("thetaflow.financials")
 
+# ── In-memory cache with TTL ──
+_quote_cache: Dict[str, tuple] = {}  # ticker -> (data, timestamp)
+_CACHE_TTL = 300  # 5 minutes
+
+
+def _cache_get(ticker: str) -> Optional[Dict]:
+    if ticker in _quote_cache:
+        data, cached_at = _quote_cache[ticker]
+        if (datetime.utcnow() - cached_at).total_seconds() < _CACHE_TTL:
+            return data
+    return None
+
+
+def _cache_set(ticker: str, data: Dict):
+    _quote_cache[ticker] = (data, datetime.utcnow())
+
 
 def get_full_financials(ticker: str) -> Optional[Dict]:
-    """Pull financial data by scraping Yahoo Finance public page.
-    The API endpoints require auth now, but the HTML page embeds all data."""
-    try:
-        # Step 1: Get price + 52-week from chart API (always works)
-        basic = _get_basic_quote(ticker)
-        if not basic:
-            return None
+    """Fast financial data from Yahoo Finance chart API only (no slow page scrape).
+    Uses in-memory cache with 5-minute TTL."""
+    cached = _cache_get(ticker)
+    if cached:
+        return cached
 
-        result = {**basic}
+    result = _get_basic_quote(ticker)
+    if result:
+        # Compute distance from 52-week high
+        if result.get("fifty_two_high") and result.get("price"):
+            result["distance_from_high_pct"] = round(
+                ((result["price"] - result["fifty_two_high"]) / result["fifty_two_high"] * 100), 1
+            )
+        _cache_set(ticker, result)
+    return result
 
-        # Step 2: Scrape key metrics from Yahoo Finance page
-        url = f"https://finance.yahoo.com/quote/{ticker}/"
-        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-        resp = requests.get(url, headers=headers, timeout=10)
 
-        if resp.status_code == 200:
-            html = resp.text
+def get_full_financials_batch(tickers: List[str], max_workers: int = 8) -> Dict[str, Dict]:
+    """Fetch financials for multiple tickers in parallel.
+    Returns {ticker: financial_data} dict."""
+    results = {}
 
-            def _scrape_metric(label, html_text):
-                """Extract a metric value from Yahoo's HTML."""
-                import re
-                # Pattern: label text followed by value in next element
-                patterns = [
-                    rf'{label}.*?class="value[^"]*"[^>]*>([^<]+)',
-                    rf'{label}[^<]*</\w+>\s*<\w+[^>]*>([^<]+)',
-                ]
-                for pat in patterns:
-                    m = re.search(pat, html_text, re.IGNORECASE | re.DOTALL)
-                    if m:
-                        val = m.group(1).strip()
-                        return val
-                return None
+    # Check cache first
+    uncached = []
+    for t in tickers:
+        cached = _cache_get(t)
+        if cached:
+            results[t] = cached
+        else:
+            uncached.append(t)
 
-            def _parse_number(s):
-                if not s or s == 'N/A' or s == '--':
-                    return None
-                s = s.replace(',', '').strip()
-                try:
-                    if 'T' in s:
-                        return float(s.replace('T','')) * 1e12
-                    if 'B' in s:
-                        return float(s.replace('B','')) * 1e9
-                    if 'M' in s:
-                        return float(s.replace('M','')) * 1e6
-                    if '%' in s:
-                        return float(s.replace('%',''))
-                    return float(s)
-                except:
-                    return None
+    if not uncached:
+        return results
 
-            # Extract key metrics
-            pe_raw = _scrape_metric("PE Ratio", html)
-            fwd_pe_raw = _scrape_metric("Forward P/E", html)
-            mkt_cap_raw = _scrape_metric("Market Cap", html)
-            eps_raw = _scrape_metric("EPS", html)
-            beta_raw = _scrape_metric("Beta", html)
+    # Fetch uncached tickers in parallel
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(uncached))) as executor:
+        futures = {executor.submit(_get_basic_quote, t): t for t in uncached}
+        for future in as_completed(futures):
+            ticker = futures[future]
+            try:
+                data = future.result()
+                if data:
+                    if data.get("fifty_two_high") and data.get("price"):
+                        data["distance_from_high_pct"] = round(
+                            ((data["price"] - data["fifty_two_high"]) / data["fifty_two_high"] * 100), 1
+                        )
+                    _cache_set(ticker, data)
+                    results[ticker] = data
+            except Exception:
+                pass
 
-            pe_val = _parse_number(pe_raw)
-            fwd_pe_val = _parse_number(fwd_pe_raw)
-            mkt_cap_val = _parse_number(mkt_cap_raw)
-            beta_val = _parse_number(beta_raw)
-
-            if pe_val:
-                result["pe_trailing"] = round(pe_val, 1)
-            if fwd_pe_val:
-                result["pe_forward"] = round(fwd_pe_val, 1)
-            if mkt_cap_val:
-                result["market_cap"] = mkt_cap_val
-                result["market_cap_str"] = _format_large_number(mkt_cap_val)
-            if beta_val:
-                result["beta"] = round(beta_val, 2)
-
-            # 52-week data from chart API
-            if result.get("fifty_two_high") and result.get("price"):
-                result["distance_from_high_pct"] = round(
-                    ((result["price"] - result["fifty_two_high"]) / result["fifty_two_high"] * 100), 1
-                )
-
-        return result
-    except Exception as e:
-        logger.debug(f"Full financials failed for {ticker}: {e}")
-        return _get_basic_quote(ticker)
+    return results
 
 
 def _get_basic_quote(ticker: str) -> Optional[Dict]:
-    """Basic price + 52-week data from chart endpoint (always works, no auth)."""
+    """Fast price + 52-week data from chart endpoint (single HTTP call, no scraping)."""
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
         resp = requests.get(url, headers={"User-Agent": "ThetaFlow/1.0"},
-                           params={"interval": "1d", "range": "1mo"}, timeout=5)
+                           params={"interval": "1d", "range": "1mo"}, timeout=3)
         if resp.status_code != 200:
             return None
         meta = resp.json().get("chart", {}).get("result", [{}])[0].get("meta", {})

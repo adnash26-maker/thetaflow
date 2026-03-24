@@ -570,23 +570,36 @@ Sort by score descending. Return ONLY the JSON array, no other text."""}]
 
 
 def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
-    """Enrich Claude's dynamic chain result with live financial data and charts."""
-    from financial_data import get_full_financials, get_ticker_chart_data
-
-    seen_tickers = set()
-    valid_picks = []
+    """Enrich Claude's dynamic chain result with live financial data and charts.
+    Uses parallel batch fetching for speed."""
+    from financial_data import get_full_financials_batch, get_ticker_chart_data
 
     all_picks = ai_result.get("top_picks", []) + [
         r for r in ai_result.get("recommendations", [])
         if r.get("ticker") not in {p.get("ticker") for p in ai_result.get("top_picks", [])}
     ]
 
+    # Collect unique valid tickers
+    unique_tickers = []
+    seen = set()
     for pick in all_picks:
-        ticker = pick.get("ticker", "").upper()
+        ticker = pick.get("ticker", "").upper().strip()
+        if ticker and ticker not in seen and len(ticker) <= 5:
+            seen.add(ticker)
+            unique_tickers.append(ticker)
+
+    # Parallel batch fetch all financials at once
+    batch_data = get_full_financials_batch(unique_tickers[:12])
+
+    valid_picks = []
+    seen_tickers = set()
+
+    for pick in all_picks:
+        ticker = pick.get("ticker", "").upper().strip()
         if not ticker or ticker in seen_tickers or len(ticker) > 5:
             continue
 
-        fin = get_full_financials(ticker)
+        fin = batch_data.get(ticker)
         if fin is None:
             logger.warning(f"Ticker {ticker} not found on Yahoo Finance, skipping")
             continue
@@ -620,9 +633,6 @@ def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
                 pick["chart_data"] = chart
 
         valid_picks.append(pick)
-
-        if len(seen_tickers) >= 8:
-            time.sleep(0.3)
 
     all_valid = sorted(
         valid_picks,
