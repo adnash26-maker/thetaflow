@@ -190,7 +190,25 @@ Produce your analysis in this exact JSON format:
       "precedent_move": "e.g. '+6.2% over 21 days after Jan 2024 MAX grounding'",
       "time_horizon": "short_term",
       "impact_score": 85.0,
-      "risk_reward": "3:1"
+      "risk_reward": "3:1",
+      "financial_model": {{
+        "revenue_ttm_m": 50000,
+        "revenue_growth_base_pct": 12.0,
+        "gross_margin_pct": 65.0,
+        "ebitda_margin_pct": 35.0,
+        "net_margin_pct": 22.0,
+        "capex_pct_rev": 8.0,
+        "da_pct_rev": 5.0,
+        "tax_rate_pct": 21.0,
+        "shares_out_m": 2450,
+        "eps_current": 4.50,
+        "eps_revised": 4.95,
+        "event_revenue_impact_m": 340,
+        "event_margin_impact_bps": 200,
+        "net_debt_m": 5000,
+        "wacc_pct": 10.0,
+        "terminal_growth_pct": 3.0
+      }}
     }}
   ],
   "all_tickers": [
@@ -202,6 +220,7 @@ Produce your analysis in this exact JSON format:
 }}
 
 CRITICAL RULES:
+- financial_model is REQUIRED for each top_pick. Use your knowledge of the company's actual financials. revenue_ttm_m = trailing 12 month revenue in $M. All _pct fields are percentages (e.g. 35.0 = 35%). shares_out_m = diluted shares in millions. event_revenue_impact_m = incremental revenue from THIS event in $M. event_margin_impact_bps = margin expansion/compression in basis points. net_debt_m = total debt minus cash in $M (negative if net cash). wacc_pct and terminal_growth_pct are for DCF valuation. Use reasonable estimates based on the company's sector, size, and growth profile. eps_revised should reflect the event impact.
 - EVERY thesis must contain specific dollar amounts, percentages, or historical data points. "Benefits from increased demand" is BANNED. "$340M incremental revenue from 15% market share shift at 42% gross margin" is required.
 - historical_precedents must reference REAL past events with approximate real outcomes. Don't fabricate — if you're uncertain of exact numbers, give reasonable estimates and note they're approximate.
 - active_catalysts should list 2-4 other forces currently in play that compound with this event.
@@ -273,7 +292,7 @@ CRITICAL RULES:
         try:
             response = self.client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=4000,
+                max_tokens=6000,
                 messages=[{"role": "user", "content": prompt}]
             )
             text = response.content[0].text

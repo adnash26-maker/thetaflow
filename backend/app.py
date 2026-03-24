@@ -936,8 +936,9 @@ def export_csv_portfolio():
 
 @app.route("/api/export-xlsx", methods=["POST"])
 def export_xlsx():
-    """Export analysis as Excel workbook with valuation model buildup."""
+    """Export analysis as Excel workbook with DCF, revenue buildup, P&L pro forma."""
     import math
+    from openpyxl.utils import get_column_letter as CL
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
@@ -950,347 +951,711 @@ def export_xlsx():
 
     wb = Workbook()
 
-    # ── Style constants ──
+    # ── Styles ──
     hdr_font = Font(name='Calibri', bold=True, size=10, color='FFFFFF')
     hdr_fill = PatternFill(start_color='1B2A4A', end_color='1B2A4A', fill_type='solid')
+    input_fill = PatternFill(start_color='FFF9E6', end_color='FFF9E6', fill_type='solid')  # yellow = editable
     sec_font = Font(name='Calibri', bold=True, size=11, color='1B2A4A')
-    mono_font = Font(name='Consolas', size=10)
+    sec_font_sm = Font(name='Calibri', bold=True, size=10, color='1B2A4A')
+    label_font = Font(name='Calibri', size=10, color='4A5568')
+    num_font = Font(name='Consolas', size=10)
+    num_font_b = Font(name='Consolas', bold=True, size=10)
+    link_font = Font(name='Consolas', size=10, color='2563EB')
+    green_font = Font(name='Consolas', bold=True, size=10, color='10B981')
+    red_font = Font(name='Consolas', bold=True, size=10, color='EF4444')
     pct_fmt = '0.0%'
+    pct1_fmt = '0.0%'
     usd_fmt = '$#,##0.00'
+    usd_m = '$#,##0'
     usd_whole = '$#,##0'
-    thin_border = Border(
-        bottom=Side(style='thin', color='D0D5DD'),
+    bps_fmt = '#,##0'
+    thin_border = Border(bottom=Side(style='thin', color='D0D5DD'))
+    thick_border = Border(
+        top=Side(style='medium', color='1B2A4A'),
+        bottom=Side(style='medium', color='1B2A4A'),
     )
 
-    def style_header_row(ws, row, col_count):
+    def hdr_row(ws, row, col_count):
         for c in range(1, col_count + 1):
             cell = ws.cell(row=row, column=c)
             cell.font = hdr_font
             cell.fill = hdr_fill
             cell.alignment = Alignment(horizontal='center', vertical='center')
 
-    def auto_width(ws):
+    def auto_w(ws):
         for col in ws.columns:
-            max_len = 0
-            col_letter = col[0].column_letter
+            mx = 0
+            cl = col[0].column_letter
             for cell in col:
                 if cell.value:
-                    max_len = max(max_len, len(str(cell.value)))
-            ws.column_dimensions[col_letter].width = min(max_len + 3, 45)
+                    mx = max(mx, len(str(cell.value)))
+            ws.column_dimensions[cl].width = min(mx + 3, 50)
+
+    def write_input(ws, row, col, value, fmt=None):
+        """Write a yellow (editable) input cell."""
+        c = ws.cell(row=row, column=col, value=value)
+        c.fill = input_fill
+        c.font = num_font
+        if fmt:
+            c.number_format = fmt
+        return c
+
+    def write_formula(ws, row, col, formula, fmt=None, bold=False):
+        """Write a formula cell."""
+        c = ws.cell(row=row, column=col, value=formula)
+        c.font = num_font_b if bold else num_font
+        if fmt:
+            c.number_format = fmt
+        return c
+
+    def write_label(ws, row, col, text, bold=False, indent=0):
+        c = ws.cell(row=row, column=col, value=("  " * indent) + text)
+        c.font = sec_font_sm if bold else label_font
+        return c
+
+    top_picks = data.get("top_picks", [])
+    all_picks = data.get("recommendations", top_picks)
+    PROJ_YEARS = 5
 
     # ════════════════════════════════════════
-    # SHEET 1: Summary
+    # SHEET 1: Executive Summary
     # ════════════════════════════════════════
     ws = wb.active
     ws.title = "Summary"
     ws.sheet_properties.tabColor = "22D3EE"
+    ws.column_dimensions['A'].width = 28
+    ws.column_dimensions['B'].width = 50
 
-    ws.cell(row=1, column=1, value="THETAFLOW ANALYSIS").font = Font(name='Calibri', bold=True, size=14, color='1B2A4A')
-    ws.cell(row=2, column=1, value=f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
-    ws.cell(row=2, column=1).font = Font(name='Calibri', size=9, color='6B7D96')
+    ws.cell(row=1, column=1, value="THETAFLOW — CATALYST ANALYSIS").font = Font(name='Calibri', bold=True, size=14, color='1B2A4A')
+    ws.cell(row=2, column=1, value=f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}").font = Font(name='Calibri', size=9, color='6B7D96')
 
-    ws.cell(row=4, column=1, value="Headline").font = sec_font
-    ws.cell(row=4, column=2, value=data.get("headline", ""))
-    ws.cell(row=5, column=1, value="Direction").font = sec_font
-    top_dir = data.get("top_picks", [{}])[0].get("direction", "bullish")
-    ws.cell(row=5, column=2, value=top_dir.upper())
-    ws.cell(row=5, column=2).font = Font(name='Calibri', bold=True, size=10,
-                                          color='10B981' if top_dir == 'bullish' else 'EF4444')
-    ws.cell(row=6, column=1, value="Conviction").font = sec_font
-    top_conv = data.get("top_picks", [{}])[0].get("conviction", 0)
-    ws.cell(row=6, column=2, value=top_conv)
-    ws.cell(row=6, column=2).number_format = pct_fmt
-    ws.cell(row=7, column=1, value="Time Horizon").font = sec_font
-    ws.cell(row=7, column=2, value=data.get("ai_time_horizon", data.get("time_horizon", "")))
+    r = 4
+    for lbl, val in [
+        ("Headline", data.get("headline", "")),
+        ("Direction", (top_picks[0].get("direction", "bullish") if top_picks else "").upper()),
+        ("Conviction", top_picks[0].get("conviction", 0) if top_picks else 0),
+        ("Time Horizon", data.get("ai_time_horizon", data.get("time_horizon", ""))),
+    ]:
+        write_label(ws, r, 1, lbl, bold=True)
+        c = ws.cell(row=r, column=2, value=val)
+        if lbl == "Conviction":
+            c.number_format = pct_fmt
+        r += 1
 
-    # Themes
-    chains = data.get("chains", [])
-    if chains:
-        ws.cell(row=9, column=1, value="Investment Themes").font = sec_font
-        for i, c in enumerate(chains):
-            ws.cell(row=10 + i, column=1, value=c.get("chain_name", ""))
-            ws.cell(row=10 + i, column=2, value=c.get("relevance_score", 0))
-            ws.cell(row=10 + i, column=2).number_format = pct_fmt
+    r += 1
+    write_label(ws, r, 1, "Investment Themes", bold=True)
+    r += 1
+    for ch in data.get("chains", []):
+        ws.cell(row=r, column=1, value=ch.get("chain_name", ""))
+        ws.cell(row=r, column=2, value=ch.get("relevance_score", 0))
+        ws.cell(row=r, column=2).number_format = pct_fmt
+        r += 1
 
-    # Thesis
-    r = 10 + len(chains) + 1
-    ws.cell(row=r, column=1, value="Thesis").font = sec_font
-    ws.cell(row=r + 1, column=1, value=data.get("summary", ""))
-    ws.merge_cells(start_row=r + 1, start_column=1, end_row=r + 1, end_column=4)
+    r += 1
+    write_label(ws, r, 1, "Thesis", bold=True)
+    r += 1
+    ws.cell(row=r, column=1, value=data.get("summary", ""))
+    ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
 
-    # Obvious play
     op = data.get("obvious_play")
     if op:
-        r += 3
-        ws.cell(row=r, column=1, value="Obvious Play (Priced In)").font = sec_font
-        ws.cell(row=r + 1, column=1, value=op.get("ticker", ""))
-        ws.cell(row=r + 1, column=2, value=op.get("summary", ""))
+        r += 2
+        write_label(ws, r, 1, "Obvious Play (Priced In)", bold=True)
+        ws.cell(row=r, column=2, value=f"{op.get('ticker', '')} — {op.get('summary', '')}")
 
-    auto_width(ws)
+    r += 2
+    write_label(ws, r, 1, "Risk Factors", bold=True)
+    for rf in data.get("risk_factors", []):
+        r += 1
+        ws.cell(row=r, column=1, value=rf).font = label_font
+
+    r += 2
+    write_label(ws, r, 1, "Contrarian View", bold=True)
+    r += 1
+    ws.cell(row=r, column=1, value=data.get("contrarian_view", "")).font = label_font
 
     # ════════════════════════════════════════
-    # SHEET 2: Trades
+    # SHEET 2: Revenue Buildup & P&L Pro Forma
     # ════════════════════════════════════════
-    ws2 = wb.create_sheet("Trades")
+    ws2 = wb.create_sheet("P&L Pro Forma")
     ws2.sheet_properties.tabColor = "34D399"
-    headers = ["Ticker", "Company", "Action", "Direction", "Conviction",
-               "Order", "Chain", "Layer", "Exposure", "Impact Score",
-               "Risk/Reward", "Time Horizon",
-               "Earnings Impact", "Historical Precedent", "Thesis"]
-    for c, h in enumerate(headers, 1):
-        ws2.cell(row=1, column=c, value=h)
-    style_header_row(ws2, 1, len(headers))
+    ws2.column_dimensions['A'].width = 32
 
-    all_picks = data.get("recommendations", data.get("top_picks", []))
-    for i, t in enumerate(all_picks, 2):
-        ws2.cell(row=i, column=1, value=t.get("ticker", "")).font = Font(name='Consolas', bold=True, size=10)
-        ws2.cell(row=i, column=2, value=t.get("company", ""))
-        ws2.cell(row=i, column=3, value=t.get("action", ""))
-        ws2.cell(row=i, column=4, value=t.get("direction", ""))
-        ws2.cell(row=i, column=5, value=t.get("conviction", 0))
-        ws2.cell(row=i, column=5).number_format = pct_fmt
-        ws2.cell(row=i, column=6, value=t.get("order", 1))
-        ws2.cell(row=i, column=7, value=t.get("chain_name", ""))
-        ws2.cell(row=i, column=8, value=t.get("layer", ""))
-        ws2.cell(row=i, column=9, value=t.get("exposure", ""))
-        ws2.cell(row=i, column=10, value=t.get("impact_score", 0))
-        ws2.cell(row=i, column=11, value=t.get("risk_reward", ""))
-        ws2.cell(row=i, column=12, value=(t.get("time_horizon", "") or "").replace("_", " "))
-        ws2.cell(row=i, column=13, value=t.get("earnings_impact", ""))
-        ws2.cell(row=i, column=14, value=t.get("precedent_move", ""))
-        ws2.cell(row=i, column=15, value=t.get("thesis", t.get("investment_analysis", "")))
-        for c in range(1, len(headers) + 1):
-            ws2.cell(row=i, column=c).border = thin_border
+    # Each ticker gets a column block: Base Case (col) + Event Case (col+1)
+    # Layout: Col A = labels, then 2 cols per ticker
+    ws2.cell(row=1, column=1, value="INCOME STATEMENT — BASE vs EVENT-ADJUSTED").font = Font(name='Calibri', bold=True, size=12, color='1B2A4A')
+    ws2.cell(row=2, column=1, value="Yellow cells are editable assumptions. Formulas auto-update.").font = Font(name='Calibri', italic=True, size=9, color='6B7D96')
 
-    auto_width(ws2)
+    # Row labels for the P&L
+    labels = [
+        ("", False, False),  # row 4 = ticker headers
+        ("Share Price", False, False),
+        ("Shares Outstanding (M)", False, False),
+        ("Market Cap ($M)", False, False),
+        ("", False, False),
+        ("REVENUE BUILDUP", True, False),  # row 9
+        ("Revenue TTM ($M)", False, False),  # row 10 — INPUT
+        ("Base Growth Rate", False, False),  # row 11 — INPUT
+        ("Base Case Revenue ($M)", False, False),  # row 12 — FORMULA
+        ("Event Revenue Impact ($M)", False, False),  # row 13 — INPUT
+        ("Event-Adjusted Revenue ($M)", False, False),  # row 14 — FORMULA
+        ("Event Revenue Growth", False, False),  # row 15 — FORMULA
+        ("", False, False),
+        ("PROFITABILITY", True, False),  # row 17
+        ("Gross Margin", False, False),  # row 18 — INPUT
+        ("Gross Profit ($M)", False, False),  # row 19 — FORMULA (base)
+        ("EBITDA Margin", False, False),  # row 20 — INPUT
+        ("EBITDA ($M)", False, False),  # row 21 — FORMULA
+        ("D&A (% of Rev)", False, False),  # row 22 — INPUT
+        ("EBIT ($M)", False, False),  # row 23 — FORMULA
+        ("Tax Rate", False, False),  # row 24 — INPUT
+        ("Net Income ($M)", False, False),  # row 25 — FORMULA
+        ("Net Margin", False, False),  # row 26 — FORMULA
+        ("", False, False),
+        ("EARNINGS", True, False),  # row 28
+        ("EPS (Base)", False, False),  # row 29 — FORMULA
+        ("EPS (Event-Adjusted)", False, False),  # row 30 — FORMULA
+        ("EPS Revision", False, False),  # row 31 — FORMULA
+        ("", False, False),
+        ("VALUATION", True, False),  # row 33
+        ("Current P/E", False, False),  # row 34 — FORMULA
+        ("Event P/E", False, False),  # row 35 — FORMULA
+        ("Implied Price at Base P/E", False, False),  # row 36 — FORMULA
+        ("Upside / Downside", False, False),  # row 37 — FORMULA
+    ]
 
-    # ════════════════════════════════════════
-    # SHEET 3: Valuation & Pro Forma
-    # ════════════════════════════════════════
-    ws3 = wb.create_sheet("Valuation")
-    ws3.sheet_properties.tabColor = "FBBF24"
-    val_headers = ["Ticker", "Company", "Current Price", "Market Cap",
-                   "52w High", "52w Low", "Dist from High",
-                   "Direction", "Conviction", "Impact Score",
-                   "30d Projected Move", "Target Price", "Upside/Downside",
-                   "Conviction-Wtd Return", "Earnings Impact", "Risk/Reward"]
-    for c, h in enumerate(val_headers, 1):
-        ws3.cell(row=1, column=c, value=h)
-    style_header_row(ws3, 1, len(val_headers))
+    START_ROW = 4
+    for i, (lbl, bold, _) in enumerate(labels):
+        if lbl:
+            write_label(ws2, START_ROW + i, 1, lbl, bold=bold)
 
-    top_picks = data.get("top_picks", [])
-    for i, t in enumerate(top_picks, 2):
-        fin = t.get("financials", {})
+    # Write per-ticker columns
+    for ti, t in enumerate(top_picks):
+        fm = t.get("financial_model", {})
+        bc = 2 + ti * 2  # base case column
+        ec = bc + 1       # event case column
+        bcl = CL(bc)
+        ecl = CL(ec)
+        ws2.column_dimensions[bcl].width = 18
+        ws2.column_dimensions[ecl].width = 18
+
+        r = START_ROW
+        # Row 4: Headers
+        ws2.cell(row=r, column=bc, value=f"{t.get('ticker', '')} Base").font = sec_font_sm
+        ws2.cell(row=r, column=ec, value=f"{t.get('ticker', '')} Event").font = sec_font_sm
+        ws2.cell(row=r, column=ec).font = Font(name='Calibri', bold=True, size=10, color='10B981' if t.get('direction') == 'bullish' else 'EF4444')
+
         price = t.get("current_price", 0) or 0
-        conv = t.get("conviction", 0.5)
-        direction = t.get("direction", "bullish")
-        proj_sign = 1 if direction == "bullish" else -1
-        proj_30d = (math.exp(proj_sign * conv * 0.003 * 22) - 1)
-        target = price * (1 + proj_30d) if price else 0
+        shares = fm.get("shares_out_m", 0)
+        rev = fm.get("revenue_ttm_m", 0)
+        growth = (fm.get("revenue_growth_base_pct", 10) or 10) / 100
+        ev_impact = fm.get("event_revenue_impact_m", 0)
+        ev_margin_bps = fm.get("event_margin_impact_bps", 0)
+        gm = (fm.get("gross_margin_pct", 50) or 50) / 100
+        em = (fm.get("ebitda_margin_pct", 25) or 25) / 100
+        da_pct = (fm.get("da_pct_rev", 5) or 5) / 100
+        tax = (fm.get("tax_rate_pct", 21) or 21) / 100
 
-        ws3.cell(row=i, column=1, value=t.get("ticker", "")).font = Font(name='Consolas', bold=True, size=10)
-        ws3.cell(row=i, column=2, value=t.get("company", ""))
+        # Row 5: Share Price
+        r += 1
+        ws2.cell(row=r, column=bc, value=price).number_format = usd_fmt
+        ws2.cell(row=r, column=ec, value=price).number_format = usd_fmt
 
-        ws3.cell(row=i, column=3, value=price)
-        ws3.cell(row=i, column=3).number_format = usd_fmt
+        # Row 6: Shares Outstanding
+        r += 1
+        write_input(ws2, r, bc, shares, usd_m)
+        ws2.cell(row=r, column=ec, value=f"={bcl}{r}").number_format = usd_m
 
-        # Market cap — try to parse from string like "$1.2B"
-        mc_str = fin.get("market_cap", "") or ""
-        mc_val = None
-        if mc_str:
-            try:
-                mc_clean = mc_str.replace("$", "").replace(",", "").strip()
-                if mc_clean.endswith("T"):
-                    mc_val = float(mc_clean[:-1]) * 1e12
-                elif mc_clean.endswith("B"):
-                    mc_val = float(mc_clean[:-1]) * 1e9
-                elif mc_clean.endswith("M"):
-                    mc_val = float(mc_clean[:-1]) * 1e6
-                else:
-                    mc_val = float(mc_clean)
-            except (ValueError, IndexError):
-                pass
-        ws3.cell(row=i, column=4, value=mc_val if mc_val else mc_str)
-        if mc_val:
-            ws3.cell(row=i, column=4).number_format = usd_whole
+        # Row 7: Market Cap = Price * Shares
+        r += 1
+        write_formula(ws2, r, bc, f"={bcl}{r-2}*{bcl}{r-1}", usd_m)
+        write_formula(ws2, r, ec, f"={ecl}{r-2}*{ecl}{r-1}", usd_m)
 
-        ws3.cell(row=i, column=5, value=fin.get("fifty_two_high"))
-        ws3.cell(row=i, column=5).number_format = usd_fmt
-        ws3.cell(row=i, column=6, value=fin.get("fifty_two_low"))
-        ws3.cell(row=i, column=6).number_format = usd_fmt
+        r += 1  # blank
 
-        dist = fin.get("distance_from_high_pct")
-        ws3.cell(row=i, column=7, value=dist / 100 if dist else None)
-        ws3.cell(row=i, column=7).number_format = pct_fmt
+        # Row 9: Revenue Buildup header
+        r += 1
 
-        ws3.cell(row=i, column=8, value=direction)
-        ws3.cell(row=i, column=9, value=conv)
-        ws3.cell(row=i, column=9).number_format = pct_fmt
-        ws3.cell(row=i, column=10, value=t.get("impact_score", 0))
+        # Row 10: Revenue TTM
+        r += 1
+        rev_row = r
+        write_input(ws2, r, bc, rev, usd_m)
+        ws2.cell(row=r, column=ec, value=f"={bcl}{r}").number_format = usd_m
 
-        ws3.cell(row=i, column=11, value=proj_30d)
-        ws3.cell(row=i, column=11).number_format = pct_fmt
-        ws3.cell(row=i, column=11).font = Font(name='Consolas', size=10,
-            color='10B981' if proj_30d >= 0 else 'EF4444')
+        # Row 11: Base Growth Rate
+        r += 1
+        growth_row = r
+        write_input(ws2, r, bc, growth, pct_fmt)
+        ws2.cell(row=r, column=ec, value=f"={bcl}{r}").number_format = pct_fmt
 
-        ws3.cell(row=i, column=12, value=target)
-        ws3.cell(row=i, column=12).number_format = usd_fmt
+        # Row 12: Base Case Revenue = TTM * (1 + growth)
+        r += 1
+        base_rev_row = r
+        write_formula(ws2, r, bc, f"={bcl}{rev_row}*(1+{bcl}{growth_row})", usd_m, bold=True)
+        # Event case: base + impact
+        write_formula(ws2, r, ec, f"={bcl}{r}+{ecl}{r+1}", usd_m, bold=True)
 
-        upside = proj_30d  # same as projected move
-        ws3.cell(row=i, column=13, value=upside)
-        ws3.cell(row=i, column=13).number_format = pct_fmt
-        ws3.cell(row=i, column=13).font = Font(name='Consolas', size=10,
-            color='10B981' if upside >= 0 else 'EF4444')
+        # Row 13: Event Revenue Impact
+        r += 1
+        ev_imp_row = r
+        ws2.cell(row=r, column=bc, value=0).number_format = usd_m
+        write_input(ws2, r, ec, ev_impact, usd_m)
 
-        # Conviction-weighted return
-        cw_ret = conv * upside
-        ws3.cell(row=i, column=14, value=cw_ret)
-        ws3.cell(row=i, column=14).number_format = pct_fmt
+        # Row 14: Event-Adjusted Revenue (duplicate of row 12 event col for clarity)
+        r += 1
+        ev_rev_row = r
+        write_formula(ws2, r, bc, f"={bcl}{base_rev_row}", usd_m, bold=True)
+        write_formula(ws2, r, ec, f"={ecl}{base_rev_row}", usd_m, bold=True)
 
-        ws3.cell(row=i, column=15, value=t.get("earnings_impact", ""))
-        ws3.cell(row=i, column=16, value=t.get("risk_reward", ""))
+        # Row 15: Event Revenue Growth
+        r += 1
+        write_formula(ws2, r, bc, f"={bcl}{growth_row}", pct_fmt)
+        write_formula(ws2, r, ec, f"=({ecl}{ev_rev_row}/{bcl}{rev_row})-1", pct_fmt)
 
-        for c in range(1, len(val_headers) + 1):
-            ws3.cell(row=i, column=c).border = thin_border
+        r += 1  # blank
 
-    # Portfolio-level summary row
-    sum_row = len(top_picks) + 3
-    ws3.cell(row=sum_row, column=1, value="PORTFOLIO SUMMARY").font = sec_font
-    if top_picks:
-        avg_conv = sum(t.get("conviction", 0) for t in top_picks) / len(top_picks)
-        avg_upside = sum(
-            (math.exp((1 if t.get("direction") == "bullish" else -1) * t.get("conviction", 0.5) * 0.003 * 22) - 1)
-            for t in top_picks
-        ) / len(top_picks)
-        ws3.cell(row=sum_row + 1, column=1, value="Avg Conviction")
-        ws3.cell(row=sum_row + 1, column=2, value=avg_conv)
-        ws3.cell(row=sum_row + 1, column=2).number_format = pct_fmt
-        ws3.cell(row=sum_row + 2, column=1, value="Avg Projected Move")
-        ws3.cell(row=sum_row + 2, column=2, value=avg_upside)
-        ws3.cell(row=sum_row + 2, column=2).number_format = pct_fmt
-        ws3.cell(row=sum_row + 3, column=1, value="Number of Picks")
-        ws3.cell(row=sum_row + 3, column=2, value=len(top_picks))
+        # Row 17: Profitability header
+        r += 1
 
-    auto_width(ws3)
+        # Row 18: Gross Margin
+        r += 1
+        gm_row = r
+        write_input(ws2, r, bc, gm, pct_fmt)
+        # Event: base margin + margin impact (bps)
+        write_input(ws2, r, ec, gm + ev_margin_bps / 10000, pct_fmt)
+
+        # Row 19: Gross Profit = Revenue * Gross Margin
+        r += 1
+        write_formula(ws2, r, bc, f"={bcl}{ev_rev_row}*{bcl}{gm_row}", usd_m)
+        write_formula(ws2, r, ec, f"={ecl}{ev_rev_row}*{ecl}{gm_row}", usd_m)
+
+        # Row 20: EBITDA Margin
+        r += 1
+        em_row = r
+        write_input(ws2, r, bc, em, pct_fmt)
+        write_input(ws2, r, ec, em + ev_margin_bps / 20000, pct_fmt)  # half of margin impact flows to EBITDA
+
+        # Row 21: EBITDA = Revenue * EBITDA Margin
+        r += 1
+        ebitda_row = r
+        write_formula(ws2, r, bc, f"={bcl}{ev_rev_row}*{bcl}{em_row}", usd_m, bold=True)
+        write_formula(ws2, r, ec, f"={ecl}{ev_rev_row}*{ecl}{em_row}", usd_m, bold=True)
+
+        # Row 22: D&A % of Rev
+        r += 1
+        da_row = r
+        write_input(ws2, r, bc, da_pct, pct_fmt)
+        ws2.cell(row=r, column=ec, value=f"={bcl}{r}").number_format = pct_fmt
+
+        # Row 23: EBIT = EBITDA - D&A
+        r += 1
+        ebit_row = r
+        write_formula(ws2, r, bc, f"={bcl}{ebitda_row}-{bcl}{ev_rev_row}*{bcl}{da_row}", usd_m, bold=True)
+        write_formula(ws2, r, ec, f"={ecl}{ebitda_row}-{ecl}{ev_rev_row}*{ecl}{da_row}", usd_m, bold=True)
+
+        # Row 24: Tax Rate
+        r += 1
+        tax_row = r
+        write_input(ws2, r, bc, tax, pct_fmt)
+        ws2.cell(row=r, column=ec, value=f"={bcl}{r}").number_format = pct_fmt
+
+        # Row 25: Net Income = EBIT * (1 - Tax)
+        r += 1
+        ni_row = r
+        write_formula(ws2, r, bc, f"={bcl}{ebit_row}*(1-{bcl}{tax_row})", usd_m, bold=True)
+        write_formula(ws2, r, ec, f"={ecl}{ebit_row}*(1-{ecl}{tax_row})", usd_m, bold=True)
+
+        # Row 26: Net Margin = NI / Rev
+        r += 1
+        write_formula(ws2, r, bc, f"={bcl}{ni_row}/{bcl}{ev_rev_row}", pct_fmt)
+        write_formula(ws2, r, ec, f"={ecl}{ni_row}/{ecl}{ev_rev_row}", pct_fmt)
+
+        r += 1  # blank
+        r += 1  # Earnings header
+
+        # Row 29: EPS Base = NI / Shares
+        r += 1
+        eps_base_row = r
+        shares_row = START_ROW + 2  # row 6
+        write_formula(ws2, r, bc, f"={bcl}{ni_row}/{bcl}{shares_row}", usd_fmt, bold=True)
+        write_formula(ws2, r, ec, f"={ecl}{ni_row}/{ecl}{shares_row}", usd_fmt, bold=True)
+
+        # Row 30: EPS Event (same as ec col of row 29)
+        r += 1
+        write_formula(ws2, r, bc, f"={bcl}{eps_base_row}", usd_fmt)
+        write_formula(ws2, r, ec, f"={ecl}{eps_base_row}", usd_fmt, bold=True)
+
+        # Row 31: EPS Revision = Event EPS - Base EPS
+        r += 1
+        write_formula(ws2, r, bc, "", usd_fmt)
+        write_formula(ws2, r, ec, f"={ecl}{eps_base_row}-{bcl}{eps_base_row}", usd_fmt, bold=True)
+
+        r += 1  # blank
+        r += 1  # Valuation header
+
+        # Row 34: Current P/E = Price / Base EPS
+        r += 1
+        pe_row = r
+        price_row = START_ROW + 1  # row 5
+        write_formula(ws2, r, bc, f"=IF({bcl}{eps_base_row}>0,{bcl}{price_row}/{bcl}{eps_base_row},\"N/A\")", '0.0x')
+        write_formula(ws2, r, ec, f"=IF({ecl}{eps_base_row}>0,{ecl}{price_row}/{ecl}{eps_base_row},\"N/A\")", '0.0x')
+
+        # Row 35: Event P/E (forward)
+        r += 1
+
+        # Row 36: Implied Price = Event EPS * Base P/E
+        r += 1
+        write_formula(ws2, r, bc, "", usd_fmt)
+        write_formula(ws2, r, ec, f"=IF(ISNUMBER({bcl}{pe_row}),{ecl}{eps_base_row}*{bcl}{pe_row},\"N/A\")", usd_fmt, bold=True)
+
+        # Row 37: Upside/Downside = (Implied - Current) / Current
+        r += 1
+        implied_row = r - 1
+        write_formula(ws2, r, bc, "", pct_fmt)
+        write_formula(ws2, r, ec, f"=IF(ISNUMBER({ecl}{implied_row}),({ecl}{implied_row}-{ecl}{price_row})/{ecl}{price_row},\"N/A\")", pct_fmt, bold=True)
+
+    auto_w(ws2)
 
     # ════════════════════════════════════════
-    # SHEET 4: Portfolio Sizing
+    # SHEET 3: DCF Valuation (top pick)
+    # ════════════════════════════════════════
+    if top_picks:
+        t0 = top_picks[0]
+        fm0 = t0.get("financial_model", {})
+        ws3 = wb.create_sheet("DCF Model")
+        ws3.sheet_properties.tabColor = "FBBF24"
+        ws3.column_dimensions['A'].width = 30
+
+        ws3.cell(row=1, column=1, value=f"DCF VALUATION — {t0.get('ticker', '')}").font = Font(name='Calibri', bold=True, size=12, color='1B2A4A')
+        ws3.cell(row=2, column=1, value=f"{t0.get('company', '')}").font = Font(name='Calibri', size=10, color='4A5568')
+        ws3.cell(row=3, column=1, value="Yellow cells are editable. All projections and valuation update automatically.").font = Font(name='Calibri', italic=True, size=9, color='6B7D96')
+
+        # ── Assumptions block (rows 5-14) ──
+        r = 5
+        write_label(ws3, r, 1, "ASSUMPTIONS", bold=True)
+        ws3.cell(row=r, column=2, value="Value").font = sec_font_sm
+
+        rev0 = fm0.get("revenue_ttm_m", 10000) or 10000
+        g0 = (fm0.get("revenue_growth_base_pct", 10) or 10) / 100
+        em0 = (fm0.get("ebitda_margin_pct", 25) or 25) / 100
+        capex0 = (fm0.get("capex_pct_rev", 8) or 8) / 100
+        da0 = (fm0.get("da_pct_rev", 5) or 5) / 100
+        tax0 = (fm0.get("tax_rate_pct", 21) or 21) / 100
+        wacc0 = (fm0.get("wacc_pct", 10) or 10) / 100
+        tg0 = (fm0.get("terminal_growth_pct", 3) or 3) / 100
+        nd0 = fm0.get("net_debt_m", 0) or 0
+        shares0 = fm0.get("shares_out_m", 100) or 100
+        ev_impact0 = fm0.get("event_revenue_impact_m", 0) or 0
+        price0 = t0.get("current_price", 0) or 0
+
+        assumptions = [
+            ("Revenue TTM ($M)", rev0, usd_m),
+            ("Revenue Growth Yr 1 (incl. event)", g0, pct_fmt),
+            ("Growth Decay / Yr", 0.02, pct_fmt),
+            ("EBITDA Margin", em0, pct_fmt),
+            ("Capex (% of Rev)", capex0, pct_fmt),
+            ("D&A (% of Rev)", da0, pct_fmt),
+            ("Tax Rate", tax0, pct_fmt),
+            ("NWC (% of Rev Change)", 0.10, pct_fmt),
+            ("WACC", wacc0, pct_fmt),
+            ("Terminal Growth Rate", tg0, pct_fmt),
+            ("Net Debt ($M)", nd0, usd_m),
+            ("Shares Outstanding (M)", shares0, '#,##0'),
+            ("Event Revenue Impact ($M)", ev_impact0, usd_m),
+            ("Current Share Price", price0, usd_fmt),
+        ]
+        for i, (lbl, val, fmt) in enumerate(assumptions):
+            arow = r + 1 + i
+            write_label(ws3, arow, 1, lbl)
+            write_input(ws3, arow, 2, val, fmt)
+
+        # Named rows for formula references
+        REV_ROW = r + 1       # B6
+        G1_ROW = r + 2        # B7
+        GDECAY_ROW = r + 3    # B8
+        EM_ROW = r + 4        # B9
+        CAPEX_ROW = r + 5     # B10
+        DA_ROW = r + 6        # B11
+        TAX_ROW = r + 7       # B12
+        NWC_ROW = r + 8       # B13
+        WACC_ROW = r + 9      # B14
+        TG_ROW = r + 10       # B15
+        ND_ROW = r + 11       # B16
+        SH_ROW = r + 12       # B17
+        EV_IMP_ROW = r + 13   # B18
+        PRICE_ROW = r + 14    # B19
+
+        # ── Projection table (rows 22+) ──
+        pr = r + 1 + len(assumptions) + 2  # start of projection table
+        write_label(ws3, pr, 1, "PROJECTION", bold=True)
+
+        # Column headers: A=label, B=Year 0, C=Year 1, ... G=Year 5
+        ws3.cell(row=pr, column=2, value="Year 0 (LTM)").font = sec_font_sm
+        for y in range(1, PROJ_YEARS + 1):
+            ws3.cell(row=pr, column=2 + y, value=f"Year {y}").font = sec_font_sm
+            ws3.column_dimensions[CL(2 + y)].width = 16
+        ws3.column_dimensions['B'].width = 16
+
+        # Revenue row
+        pr += 1
+        rev_pr = pr
+        write_label(ws3, pr, 1, "Revenue ($M)", bold=True)
+        ws3.cell(row=pr, column=2, value=f"=$B${REV_ROW}").number_format = usd_m
+        ws3.cell(row=pr, column=2).font = num_font_b
+        for y in range(1, PROJ_YEARS + 1):
+            col = 2 + y
+            pcol = CL(col - 1)
+            # Year 1 growth = G1, subsequent years decay by GDECAY
+            if y == 1:
+                ws3.cell(row=pr, column=col, value=f"={pcol}{pr}*(1+$B${G1_ROW})").number_format = usd_m
+            else:
+                ws3.cell(row=pr, column=col, value=f"={pcol}{pr}*(1+MAX($B${G1_ROW}-$B${GDECAY_ROW}*{y-1},0.02))").number_format = usd_m
+            ws3.cell(row=pr, column=col).font = num_font_b
+
+        # Growth rate row
+        pr += 1
+        write_label(ws3, pr, 1, "Revenue Growth", indent=1)
+        ws3.cell(row=pr, column=2, value="")
+        for y in range(1, PROJ_YEARS + 1):
+            col = 2 + y
+            pcol = CL(col - 1)
+            ws3.cell(row=pr, column=col, value=f"={CL(col)}{rev_pr}/{pcol}{rev_pr}-1").number_format = pct_fmt
+
+        # EBITDA
+        pr += 1
+        ebitda_pr = pr
+        write_label(ws3, pr, 1, "EBITDA ($M)", bold=True)
+        for y in range(0, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"={CL(col)}{rev_pr}*$B${EM_ROW}").number_format = usd_m
+            ws3.cell(row=pr, column=col).font = num_font_b
+
+        # EBITDA Margin (reference row)
+        pr += 1
+        write_label(ws3, pr, 1, "EBITDA Margin", indent=1)
+        for y in range(0, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"=$B${EM_ROW}").number_format = pct_fmt
+
+        # D&A
+        pr += 1
+        da_pr = pr
+        write_label(ws3, pr, 1, "(-) D&A ($M)", indent=1)
+        for y in range(0, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"={CL(col)}{rev_pr}*$B${DA_ROW}").number_format = usd_m
+
+        # EBIT
+        pr += 1
+        ebit_pr = pr
+        write_label(ws3, pr, 1, "EBIT ($M)", bold=True)
+        for y in range(0, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"={CL(col)}{ebitda_pr}-{CL(col)}{da_pr}").number_format = usd_m
+            ws3.cell(row=pr, column=col).font = num_font_b
+
+        # Taxes
+        pr += 1
+        tax_pr = pr
+        write_label(ws3, pr, 1, "(-) Taxes ($M)", indent=1)
+        for y in range(0, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"={CL(col)}{ebit_pr}*$B${TAX_ROW}").number_format = usd_m
+
+        # NOPAT
+        pr += 1
+        nopat_pr = pr
+        write_label(ws3, pr, 1, "NOPAT ($M)")
+        for y in range(0, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"={CL(col)}{ebit_pr}-{CL(col)}{tax_pr}").number_format = usd_m
+
+        # Add back D&A
+        pr += 1
+        addback_pr = pr
+        write_label(ws3, pr, 1, "(+) D&A ($M)", indent=1)
+        for y in range(0, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"={CL(col)}{da_pr}").number_format = usd_m
+
+        # Capex
+        pr += 1
+        capex_pr = pr
+        write_label(ws3, pr, 1, "(-) Capex ($M)", indent=1)
+        for y in range(0, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"={CL(col)}{rev_pr}*$B${CAPEX_ROW}").number_format = usd_m
+
+        # NWC Change
+        pr += 1
+        nwc_pr = pr
+        write_label(ws3, pr, 1, "(-) NWC Change ($M)", indent=1)
+        ws3.cell(row=pr, column=2, value=0).number_format = usd_m
+        for y in range(1, PROJ_YEARS + 1):
+            col = 2 + y
+            pcol = CL(col - 1)
+            ws3.cell(row=pr, column=col, value=f"=({CL(col)}{rev_pr}-{pcol}{rev_pr})*$B${NWC_ROW}").number_format = usd_m
+
+        # ── UFCF (Unlevered Free Cash Flow) ──
+        pr += 1
+        ufcf_pr = pr
+        write_label(ws3, pr, 1, "UNLEVERED FCF ($M)", bold=True)
+        for y in range(0, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col,
+                     value=f"={CL(col)}{nopat_pr}+{CL(col)}{addback_pr}-{CL(col)}{capex_pr}-{CL(col)}{nwc_pr}").number_format = usd_m
+            ws3.cell(row=pr, column=col).font = num_font_b
+            ws3.cell(row=pr, column=col).border = thick_border
+
+        # ── Discount factors ──
+        pr += 2
+        disc_pr = pr
+        write_label(ws3, pr, 1, "Discount Factor")
+        for y in range(1, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"=1/(1+$B${WACC_ROW})^{y}").number_format = '0.0000'
+
+        # PV of FCF
+        pr += 1
+        pv_pr = pr
+        write_label(ws3, pr, 1, "PV of FCF ($M)")
+        for y in range(1, PROJ_YEARS + 1):
+            col = 2 + y
+            ws3.cell(row=pr, column=col, value=f"={CL(col)}{ufcf_pr}*{CL(col)}{disc_pr}").number_format = usd_m
+
+        # ── Valuation summary (below projection table) ──
+        pr += 2
+        vs = pr
+        write_label(ws3, vs, 1, "VALUATION SUMMARY", bold=True)
+
+        # Sum of PV of FCFs
+        vs += 1
+        write_label(ws3, vs, 1, "Sum of PV of FCFs ($M)")
+        last_col = CL(2 + PROJ_YEARS)
+        write_formula(ws3, vs, 2, f"=SUM(C{pv_pr}:{last_col}{pv_pr})", usd_m, bold=True)
+        sum_pv_row = vs
+
+        # Terminal Value = Final Year FCF * (1+g) / (WACC - g)
+        vs += 1
+        write_label(ws3, vs, 1, "Terminal Value ($M)")
+        write_formula(ws3, vs, 2, f"={last_col}{ufcf_pr}*(1+$B${TG_ROW})/($B${WACC_ROW}-$B${TG_ROW})", usd_m, bold=True)
+        tv_row = vs
+
+        # PV of Terminal Value
+        vs += 1
+        write_label(ws3, vs, 1, "PV of Terminal Value ($M)")
+        write_formula(ws3, vs, 2, f"=B{tv_row}/(1+$B${WACC_ROW})^{PROJ_YEARS}", usd_m, bold=True)
+        pv_tv_row = vs
+
+        # Enterprise Value
+        vs += 1
+        write_label(ws3, vs, 1, "Enterprise Value ($M)", bold=True)
+        write_formula(ws3, vs, 2, f"=B{sum_pv_row}+B{pv_tv_row}", usd_m, bold=True)
+        ws3.cell(row=vs, column=2).border = thick_border
+        ev_row = vs
+
+        # Less Net Debt
+        vs += 1
+        write_label(ws3, vs, 1, "(-) Net Debt ($M)")
+        write_formula(ws3, vs, 2, f"=$B${ND_ROW}", usd_m)
+
+        # Equity Value
+        vs += 1
+        write_label(ws3, vs, 1, "Equity Value ($M)", bold=True)
+        write_formula(ws3, vs, 2, f"=B{ev_row}-B{vs-1}", usd_m, bold=True)
+        eq_row = vs
+
+        # Implied Share Price
+        vs += 1
+        write_label(ws3, vs, 1, "Implied Share Price", bold=True)
+        write_formula(ws3, vs, 2, f"=B{eq_row}/$B${SH_ROW}", usd_fmt, bold=True)
+        ws3.cell(row=vs, column=2).font = Font(name='Consolas', bold=True, size=12, color='1B2A4A')
+        ws3.cell(row=vs, column=2).border = thick_border
+        impl_row = vs
+
+        # Current Price
+        vs += 1
+        write_label(ws3, vs, 1, "Current Price")
+        write_formula(ws3, vs, 2, f"=$B${PRICE_ROW}", usd_fmt)
+
+        # Upside/Downside
+        vs += 1
+        write_label(ws3, vs, 1, "UPSIDE / DOWNSIDE", bold=True)
+        write_formula(ws3, vs, 2, f"=(B{impl_row}-B{vs-1})/B{vs-1}", pct_fmt, bold=True)
+        ws3.cell(row=vs, column=2).font = Font(name='Consolas', bold=True, size=12, color='10B981')
+
+        auto_w(ws3)
+
+    # ════════════════════════════════════════
+    # SHEET 4: Trades Overview
+    # ════════════════════════════════════════
+    ws4 = wb.create_sheet("Trades")
+    ws4.sheet_properties.tabColor = "818CF8"
+    headers = ["Ticker", "Company", "Action", "Direction", "Conviction",
+               "Order", "Chain", "Layer", "Impact Score", "Risk/Reward",
+               "Earnings Impact", "Precedent", "Thesis"]
+    for c, h in enumerate(headers, 1):
+        ws4.cell(row=1, column=c, value=h)
+    hdr_row(ws4, 1, len(headers))
+
+    for i, t in enumerate(all_picks, 2):
+        ws4.cell(row=i, column=1, value=t.get("ticker", "")).font = num_font_b
+        ws4.cell(row=i, column=2, value=t.get("company", ""))
+        ws4.cell(row=i, column=3, value=t.get("action", ""))
+        ws4.cell(row=i, column=4, value=t.get("direction", ""))
+        ws4.cell(row=i, column=5, value=t.get("conviction", 0)).number_format = pct_fmt
+        ws4.cell(row=i, column=6, value=t.get("order", 1))
+        ws4.cell(row=i, column=7, value=t.get("chain_name", ""))
+        ws4.cell(row=i, column=8, value=t.get("layer", ""))
+        ws4.cell(row=i, column=9, value=t.get("impact_score", 0))
+        ws4.cell(row=i, column=10, value=t.get("risk_reward", ""))
+        ws4.cell(row=i, column=11, value=t.get("earnings_impact", ""))
+        ws4.cell(row=i, column=12, value=t.get("precedent_move", ""))
+        ws4.cell(row=i, column=13, value=t.get("thesis", t.get("investment_analysis", "")))
+        for c in range(1, len(headers) + 1):
+            ws4.cell(row=i, column=c).border = thin_border
+
+    auto_w(ws4)
+
+    # ════════════════════════════════════════
+    # SHEET 5: Portfolio Sizing (if provided)
     # ════════════════════════════════════════
     portfolio_size = data.get("portfolio_size")
     if portfolio_size and top_picks:
-        ws4 = wb.create_sheet("Portfolio Sizing")
-        ws4.sheet_properties.tabColor = "818CF8"
+        ws5 = wb.create_sheet("Portfolio Sizing")
+        ws5.sheet_properties.tabColor = "34D399"
+        ws5.cell(row=1, column=1, value="PORTFOLIO SIZING").font = Font(name='Calibri', bold=True, size=12, color='1B2A4A')
+        write_label(ws5, 2, 1, "Portfolio Value")
+        write_input(ws5, 2, 2, portfolio_size, usd_whole)
 
-        ws4.cell(row=1, column=1, value="PORTFOLIO SIZING").font = Font(name='Calibri', bold=True, size=12, color='1B2A4A')
-        ws4.cell(row=2, column=1, value="Portfolio Value")
-        ws4.cell(row=2, column=2, value=portfolio_size)
-        ws4.cell(row=2, column=2).number_format = usd_whole
+        ps_h = ["Ticker", "Company", "Action", "Conviction", "Weight",
+                "Dollar Allocation", "Shares", "Price", "Proj Return", "Dollar P&L"]
+        for c, h in enumerate(ps_h, 1):
+            ws5.cell(row=4, column=c, value=h)
+        hdr_row(ws5, 4, len(ps_h))
 
-        ps_headers = ["Ticker", "Company", "Action", "Conviction", "Weight",
-                      "Dollar Allocation", "Shares", "Price", "Projected Return", "Dollar P&L"]
-        for c, h in enumerate(ps_headers, 1):
-            ws4.cell(row=4, column=c, value=h)
-        style_header_row(ws4, 4, len(ps_headers))
-
-        valid_picks = [t for t in top_picks if t.get("current_price", 0) > 0]
-        total_conv = sum(t.get("conviction", 0.5) for t in valid_picks) or 1
-
-        for i, t in enumerate(valid_picks, 5):
-            conv = t.get("conviction", 0.5)
-            weight = conv / total_conv
-            dollars = portfolio_size * weight
-            price = t.get("current_price", 0)
-            shares = int(dollars / price) if price else 0
-            proj_sign = 1 if t.get("direction") == "bullish" else -1
-            proj_ret = math.exp(proj_sign * conv * 0.003 * 22) - 1
-            dollar_pnl = dollars * proj_ret
-
-            ws4.cell(row=i, column=1, value=t.get("ticker", "")).font = Font(name='Consolas', bold=True, size=10)
-            ws4.cell(row=i, column=2, value=t.get("company", ""))
-            ws4.cell(row=i, column=3, value=t.get("action", ""))
-            ws4.cell(row=i, column=4, value=conv)
-            ws4.cell(row=i, column=4).number_format = pct_fmt
-            ws4.cell(row=i, column=5, value=weight)
-            ws4.cell(row=i, column=5).number_format = pct_fmt
-            ws4.cell(row=i, column=6, value=dollars)
-            ws4.cell(row=i, column=6).number_format = usd_whole
-            ws4.cell(row=i, column=7, value=shares)
-            ws4.cell(row=i, column=8, value=price)
-            ws4.cell(row=i, column=8).number_format = usd_fmt
-            ws4.cell(row=i, column=9, value=proj_ret)
-            ws4.cell(row=i, column=9).number_format = pct_fmt
-            ws4.cell(row=i, column=10, value=dollar_pnl)
-            ws4.cell(row=i, column=10).number_format = usd_whole
-            ws4.cell(row=i, column=10).font = Font(name='Consolas', size=10,
-                color='10B981' if dollar_pnl >= 0 else 'EF4444')
-            for c in range(1, len(ps_headers) + 1):
-                ws4.cell(row=i, column=c).border = thin_border
-
-        # Totals row
-        tr = 5 + len(valid_picks)
-        ws4.cell(row=tr, column=1, value="TOTAL").font = sec_font
-        ws4.cell(row=tr, column=6, value=portfolio_size)
-        ws4.cell(row=tr, column=6).number_format = usd_whole
-        ws4.cell(row=tr, column=6).font = sec_font
-        total_pnl = sum(
-            (portfolio_size * (t.get("conviction", 0.5) / total_conv)) *
-            (math.exp((1 if t.get("direction") == "bullish" else -1) * t.get("conviction", 0.5) * 0.003 * 22) - 1)
-            for t in valid_picks
-        )
-        ws4.cell(row=tr, column=10, value=total_pnl)
-        ws4.cell(row=tr, column=10).number_format = usd_whole
-        ws4.cell(row=tr, column=10).font = Font(name='Consolas', bold=True, size=10,
-            color='10B981' if total_pnl >= 0 else 'EF4444')
-
-        auto_width(ws4)
-
-    # ════════════════════════════════════════
-    # SHEET 5: Risk Assessment
-    # ════════════════════════════════════════
-    ws5 = wb.create_sheet("Risk")
-    ws5.sheet_properties.tabColor = "FBBF24"
-
-    ws5.cell(row=1, column=1, value="RISK ASSESSMENT").font = Font(name='Calibri', bold=True, size=12, color='1B2A4A')
-
-    r = 3
-    risk_factors = data.get("risk_factors", [])
-    if risk_factors:
-        ws5.cell(row=r, column=1, value="Risk Factors").font = sec_font
-        r += 1
-        for rf in risk_factors:
-            ws5.cell(row=r, column=1, value=rf)
-            r += 1
-        r += 1
-
-    contrarian = data.get("contrarian_view", "")
-    if contrarian:
-        ws5.cell(row=r, column=1, value="Contrarian View").font = sec_font
-        r += 1
-        ws5.cell(row=r, column=1, value=contrarian)
-        ws5.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
-        r += 2
-
-    catalysts = data.get("active_catalysts", [])
-    if catalysts:
-        ws5.cell(row=r, column=1, value="Active Cross-Catalysts").font = sec_font
-        r += 1
-        for cat in catalysts:
-            ws5.cell(row=r, column=1, value=cat)
-            r += 1
-        r += 1
-
-    precedents = data.get("historical_precedents", [])
-    if precedents:
-        ws5.cell(row=r, column=1, value="Historical Precedents").font = sec_font
-        r += 1
-        for p in precedents:
-            ws5.cell(row=r, column=1, value=f"{p.get('event', '')} ({p.get('date', '')})")
-            r += 1
-            for o in p.get("outcomes", []):
-                ws5.cell(row=r, column=1, value=f"  {o.get('ticker', '')}: {o.get('move', '')} over {o.get('period', '')}")
-                r += 1
-
-    auto_width(ws5)
+        valid = [t for t in top_picks if t.get("current_price", 0) > 0]
+        tc = sum(t.get("conviction", 0.5) for t in valid) or 1
+        for i, t in enumerate(valid, 5):
+            cv = t.get("conviction", 0.5)
+            w = cv / tc
+            d = portfolio_size * w
+            pr = t.get("current_price", 0)
+            sh = int(d / pr) if pr else 0
+            ps = 1 if t.get("direction") == "bullish" else -1
+            ret = math.exp(ps * cv * 0.003 * 22) - 1
+            pnl = d * ret
+            ws5.cell(row=i, column=1, value=t.get("ticker", "")).font = num_font_b
+            ws5.cell(row=i, column=2, value=t.get("company", ""))
+            ws5.cell(row=i, column=3, value=t.get("action", ""))
+            ws5.cell(row=i, column=4, value=cv).number_format = pct_fmt
+            ws5.cell(row=i, column=5, value=w).number_format = pct_fmt
+            ws5.cell(row=i, column=6, value=d).number_format = usd_whole
+            ws5.cell(row=i, column=7, value=sh)
+            ws5.cell(row=i, column=8, value=pr).number_format = usd_fmt
+            ws5.cell(row=i, column=9, value=ret).number_format = pct_fmt
+            ws5.cell(row=i, column=10, value=pnl).number_format = usd_whole
+        auto_w(ws5)
 
     # ── Write to bytes and return ──
     output = io.BytesIO()
