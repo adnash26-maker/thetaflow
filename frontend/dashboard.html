@@ -591,32 +591,18 @@
             <span style="font-size:10px;color:var(--mt);font-family:'JetBrains Mono',monospace">v2.0</span>
         </div>
         <p style="color:var(--mt);font-size:12px;margin-bottom:16px">Enter a headline, earnings event, or macro scenario. Returns 2nd/3rd-order supply chain plays with live prices, historical precedent, and conviction-weighted projections.</p>
-        <div style="display:flex;gap:1px;background:var(--bd);border-radius:var(--r1);overflow:hidden;margin-bottom:16px">
-            <div style="background:var(--s2);padding:10px 14px;flex:1;text-align:center">
-                <div style="font-size:9px;color:var(--mt);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Method</div>
-                <select id="cfgMethod" style="background:var(--s3);color:var(--tx);border:1px solid var(--bd);border-radius:var(--r1);padding:4px 8px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;width:100%;text-align:center;outline:none" onchange="window._cfg_method=this.value">
-                    <option value="value_chain">Value Chain Mapping</option>
-                    <option value="sector_rotation">Sector Rotation</option>
-                    <option value="event_driven">Event-Driven</option>
-                    <option value="factor_model">Multi-Factor Model</option>
-                </select>
-            </div>
-            <div style="background:var(--s2);padding:10px 14px;flex:1;text-align:center">
-                <div style="font-size:9px;color:var(--mt);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Data</div>
-                <select id="cfgData" style="background:var(--s3);color:var(--tx);border:1px solid var(--bd);border-radius:var(--r1);padding:4px 8px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;width:100%;text-align:center;outline:none">
-                    <option value="yahoo_sec_wsj">Yahoo / SEC / WSJ</option>
-                    <option value="yahoo_only">Yahoo Finance Only</option>
-                    <option value="sec_edgar">SEC EDGAR Focus</option>
-                </select>
-            </div>
-            <div style="background:var(--s2);padding:10px 14px;flex:1;text-align:center">
-                <div style="font-size:9px;color:var(--mt);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Projection</div>
-                <select id="cfgProjection" style="background:var(--s3);color:var(--tx);border:1px solid var(--bd);border-radius:var(--r1);padding:4px 8px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;width:100%;text-align:center;outline:none" onchange="window._cfg_projection=this.value">
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+            <div style="flex:0 0 auto">
+                <div style="font-size:9px;color:var(--mt);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Projection Model</div>
+                <select id="cfgProjection" style="background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:var(--r1);padding:6px 10px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;outline:none" onchange="updateProjectionDesc(this.value)">
                     <option value="gbm_30d">30d GBM Cone</option>
                     <option value="gbm_60d">60d GBM Cone</option>
                     <option value="gbm_90d">90d GBM Cone</option>
                     <option value="linear">Linear Regression</option>
                 </select>
+            </div>
+            <div id="projDesc" style="flex:1;font-size:10px;color:var(--mt);line-height:1.5;padding-top:14px">
+                <strong style="color:var(--tx2)">Geometric Brownian Motion</strong> &mdash; Models price as a stochastic process with drift and volatility calibrated from historical returns. Best for event-driven scenarios where you expect a directional move but uncertain magnitude. Outputs a probability cone (1-2 sigma) around the expected path.
             </div>
         </div>
         <div class="scorecard" id="scorecard" style="display:none"></div>
@@ -720,6 +706,15 @@
 
 <script>
 const API = location.origin + '/api';
+
+// ── Projection model descriptions ──
+const PROJ_DESC = {
+    gbm_30d: '<strong style="color:var(--tx2)">Geometric Brownian Motion, 30 days</strong> &mdash; Stochastic process with drift + volatility from historical returns. Best for near-term event-driven moves. Outputs 1-2 sigma probability cone around expected path.',
+    gbm_60d: '<strong style="color:var(--tx2)">Geometric Brownian Motion, 60 days</strong> &mdash; Same GBM framework over a longer window. Better for catalysts with delayed earnings impact (e.g. product launches, regulatory approvals). Wider cone reflects compounding uncertainty.',
+    gbm_90d: '<strong style="color:var(--tx2)">Geometric Brownian Motion, 90 days</strong> &mdash; Quarter-length projection. Use when the thesis depends on a full earnings cycle to play out. Cone width increases ~sqrt(t), so expect meaningfully wider bands.',
+    linear: '<strong style="color:var(--tx2)">Linear Regression</strong> &mdash; OLS trend line on recent price history, extrapolated forward. Use for secular trends (margin expansion, market share gains) where mean-reversion is unlikely. No volatility cone &mdash; single projected path.',
+};
+function updateProjectionDesc(val) { document.getElementById('projDesc').innerHTML = PROJ_DESC[val] || ''; }
 
 // ── Nav Menu & View Switching ──
 function toggleMenu() { document.getElementById('navDrop').classList.toggle('open') }

@@ -1317,6 +1317,95 @@ def export_xlsx():
     auto_w(ws2)
 
     # ════════════════════════════════════════
+    # SHEET 2b: Revenue Bridge (segment-level buildup)
+    # ════════════════════════════════════════
+    ws_rb = wb.create_sheet("Revenue Bridge")
+    ws_rb.sheet_properties.tabColor = "06B6D4"
+    ws_rb.column_dimensions['A'].width = 34
+
+    ws_rb.cell(row=1, column=1, value="REVENUE BRIDGE — SEGMENT BUILDUP").font = Font(name='Calibri', bold=True, size=12, color='1B2A4A')
+    ws_rb.cell(row=2, column=1, value="How the event impact flows through each business segment. Yellow cells are editable.").font = Font(name='Calibri', italic=True, size=9, color='6B7D96')
+
+    rb_row = 4
+    for ti, t in enumerate(top_picks):
+        fm = t.get("financial_model", {})
+        segments = fm.get("revenue_segments", [])
+        ticker = t.get("ticker", "")
+
+        # Ticker header
+        ws_rb.cell(row=rb_row, column=1, value=f"{ticker} — {t.get('company', '')}").font = Font(name='Calibri', bold=True, size=11, color='1B2A4A')
+        rb_row += 1
+
+        # Column headers
+        seg_headers = ["Segment", "TTM Revenue ($M)", "Base Growth", "Base Rev ($M)",
+                       "Event Impact ($M)", "Impact Driver", "Event Rev ($M)", "Event Growth"]
+        for c, h in enumerate(seg_headers, 1):
+            ws_rb.cell(row=rb_row, column=c, value=h)
+        hdr_row(ws_rb, rb_row, len(seg_headers))
+        for c in range(2, 9):
+            ws_rb.column_dimensions[CL(c)].width = 16
+        ws_rb.column_dimensions[CL(6)].width = 40  # Impact Driver column wider
+        header_r = rb_row
+
+        if segments:
+            for si, seg in enumerate(segments):
+                sr = rb_row + 1 + si
+                seg_name = seg.get("name", f"Segment {si+1}")
+                seg_rev = seg.get("revenue_m", 0)
+                seg_growth = (seg.get("growth_pct", 10) or 10) / 100
+                seg_impact = seg.get("event_impact_m", 0)
+                seg_driver = seg.get("impact_driver", "")
+
+                ws_rb.cell(row=sr, column=1, value=seg_name).font = label_font
+                write_input(ws_rb, sr, 2, seg_rev, usd_m)  # TTM Rev
+                write_input(ws_rb, sr, 3, seg_growth, pct_fmt)  # Base Growth
+                # Base Rev = TTM * (1+growth)
+                write_formula(ws_rb, sr, 4, f"={CL(2)}{sr}*(1+{CL(3)}{sr})", usd_m)
+                write_input(ws_rb, sr, 5, seg_impact, usd_m)  # Event Impact
+                ws_rb.cell(row=sr, column=6, value=seg_driver).font = Font(name='Calibri', italic=True, size=9, color='4A5568')
+                # Event Rev = Base + Impact
+                write_formula(ws_rb, sr, 7, f"={CL(4)}{sr}+{CL(5)}{sr}", usd_m, bold=True)
+                # Event Growth = Event Rev / TTM - 1
+                write_formula(ws_rb, sr, 8, f"={CL(7)}{sr}/{CL(2)}{sr}-1", pct_fmt)
+                for c in range(1, len(seg_headers) + 1):
+                    ws_rb.cell(row=sr, column=c).border = thin_border
+
+            # Totals row
+            tr = rb_row + 1 + len(segments)
+            ws_rb.cell(row=tr, column=1, value="TOTAL").font = sec_font_sm
+            first_seg = rb_row + 1
+            last_seg = rb_row + len(segments)
+            for col_idx in [2, 4, 5, 7]:  # Sum columns: TTM Rev, Base Rev, Impact, Event Rev
+                ws_rb.cell(row=tr, column=col_idx,
+                           value=f"=SUM({CL(col_idx)}{first_seg}:{CL(col_idx)}{last_seg})")
+                ws_rb.cell(row=tr, column=col_idx).number_format = usd_m
+                ws_rb.cell(row=tr, column=col_idx).font = num_font_b
+            # Total event growth = Total Event Rev / Total TTM - 1
+            write_formula(ws_rb, tr, 8, f"={CL(7)}{tr}/{CL(2)}{tr}-1", pct_fmt, bold=True)
+            for c in range(1, len(seg_headers) + 1):
+                ws_rb.cell(row=tr, column=c).border = thick_border
+
+            # Delta row: shows the change
+            tr += 1
+            ws_rb.cell(row=tr, column=1, value="DELTA (Event - Base)").font = Font(name='Calibri', bold=True, size=10, color='10B981')
+            write_formula(ws_rb, tr, 4, f"={CL(7)}{tr-1}-{CL(4)}{tr-1}", usd_m, bold=True)
+            ws_rb.cell(row=tr, column=4).font = green_font
+            ws_rb.cell(row=tr, column=6, value=f"Sum of segment-level event impacts for {ticker}").font = Font(name='Calibri', italic=True, size=9, color='6B7D96')
+
+            rb_row = tr + 3  # space before next ticker
+        else:
+            # No segments — show placeholder
+            rb_row += 1
+            ws_rb.cell(row=rb_row, column=1, value="No segment data available").font = Font(name='Calibri', italic=True, size=10, color='6B7D96')
+            rev = fm.get("revenue_ttm_m", 0)
+            ev_imp = fm.get("event_revenue_impact_m", 0)
+            ws_rb.cell(row=rb_row, column=2, value=rev).number_format = usd_m
+            ws_rb.cell(row=rb_row, column=5, value=ev_imp).number_format = usd_m
+            rb_row += 3
+
+    auto_w(ws_rb)
+
+    # ════════════════════════════════════════
     # SHEET 3: DCF Valuation (top pick)
     # ════════════════════════════════════════
     if top_picks:

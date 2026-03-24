@@ -207,7 +207,10 @@ Produce your analysis in this exact JSON format:
         "event_margin_impact_bps": 200,
         "net_debt_m": 5000,
         "wacc_pct": 10.0,
-        "terminal_growth_pct": 3.0
+        "terminal_growth_pct": 3.0,
+        "revenue_segments": [
+          {{"name": "Segment Name", "revenue_m": 25000, "growth_pct": 15.0, "event_impact_m": 200, "impact_driver": "Brief explanation of why this segment is affected and by how much"}}
+        ]
       }}
     }}
   ],
@@ -220,7 +223,7 @@ Produce your analysis in this exact JSON format:
 }}
 
 CRITICAL RULES:
-- financial_model is REQUIRED for each top_pick. Use your knowledge of the company's actual financials. revenue_ttm_m = trailing 12 month revenue in $M. All _pct fields are percentages (e.g. 35.0 = 35%). shares_out_m = diluted shares in millions. event_revenue_impact_m = incremental revenue from THIS event in $M. event_margin_impact_bps = margin expansion/compression in basis points. net_debt_m = total debt minus cash in $M (negative if net cash). wacc_pct and terminal_growth_pct are for DCF valuation. Use reasonable estimates based on the company's sector, size, and growth profile. eps_revised should reflect the event impact.
+- financial_model is REQUIRED for each top_pick. Use your knowledge of the company's actual financials. revenue_ttm_m = trailing 12 month revenue in $M. All _pct fields are percentages (e.g. 35.0 = 35%). shares_out_m = diluted shares in millions. event_revenue_impact_m = incremental revenue from THIS event in $M. event_margin_impact_bps = margin expansion/compression in basis points. net_debt_m = total debt minus cash in $M (negative if net cash). wacc_pct and terminal_growth_pct are for DCF valuation. Use reasonable estimates based on the company's sector, size, and growth profile. eps_revised should reflect the event impact. revenue_segments MUST have 2-5 segments showing the company's actual business lines (e.g. Data Center, Gaming, Auto for NVIDIA), their revenue, growth rate, event impact in $M, and a 1-sentence impact_driver explaining the transmission mechanism ("GPU demand from hyperscaler capex +$X per quarter"). Segments should sum to approximately revenue_ttm_m. event_impact_m across segments should sum to event_revenue_impact_m.
 - EVERY thesis must contain specific dollar amounts, percentages, or historical data points. "Benefits from increased demand" is BANNED. "$340M incremental revenue from 15% market share shift at 42% gross margin" is required.
 - historical_precedents must reference REAL past events with approximate real outcomes. Don't fabricate — if you're uncertain of exact numbers, give reasonable estimates and note they're approximate.
 - active_catalysts should list 2-4 other forces currently in play that compound with this event.
