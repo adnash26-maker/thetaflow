@@ -336,6 +336,7 @@
             <div class="nav-item" data-view="portfolio" onclick="showView('portfolio')"><span class="nav-item-icon">📊</span> Portfolio</div>
             <div class="nav-item" data-view="trending" onclick="showView('trending')"><span class="nav-item-icon">🔥</span> Trending Trades</div>
             <div class="nav-sep"></div>
+            <div class="nav-item" data-view="how" onclick="showView('how')"><span class="nav-item-icon">❓</span> How It Works</div>
             <div class="nav-item" onclick="location.href=API+'/export'"><span class="nav-item-icon">📤</span> Export CSV</div>
         </div>
     </div>
@@ -416,6 +417,62 @@
     <div class="view-title">Trending Trades 🔥</div>
     <div class="view-sub">Recent calls with live P&L and active market signals.</div>
     <div id="trendingContent"><div class="trend-empty">Loading trending trades...</div></div>
+</div>
+</div>
+
+<!-- View: How It Works -->
+<div class="view" id="view-how">
+<div class="view-content" style="max-width:700px">
+    <div class="view-title">How ThetaFlow Works ❓</div>
+    <div class="view-sub">A step-by-step breakdown of what happens when you enter a headline.</div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--ac)">
+            <div style="font-size:24px;font-weight:900;color:var(--ac);margin-bottom:4px">1</div>
+            <div style="font-weight:700;margin-bottom:6px">You Enter a Headline</div>
+            <div style="font-size:13px;color:var(--mt);line-height:1.6">Paste any news headline, earnings report, macro announcement, or "what if" scenario. ThetaFlow works with anything from "NVIDIA beats earnings by 20%" to "China bans rare earth exports."</div>
+        </div>
+
+        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--pu)">
+            <div style="font-size:24px;font-weight:900;color:var(--pu);margin-bottom:4px">2</div>
+            <div style="font-weight:700;margin-bottom:6px">AI Identifies the Investment Themes</div>
+            <div style="font-size:13px;color:var(--mt);line-height:1.6">Claude AI reads the headline and identifies which investment themes (value chains) are affected. It then maps out the full supply chain — from upstream suppliers to downstream applications — finding companies at every layer.</div>
+        </div>
+
+        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--cy)">
+            <div style="font-size:24px;font-weight:900;color:var(--cy);margin-bottom:4px">3</div>
+            <div style="font-weight:700;margin-bottom:6px">It Skips the Obvious, Finds the Hidden Plays</div>
+            <div style="font-size:13px;color:var(--mt);line-height:1.6">The "obvious play" is dismissed (everyone sees that one). Instead, ThetaFlow identifies <strong>2nd and 3rd-order effects</strong> — the companies that benefit or suffer through indirect supply chain connections that most investors miss.</div>
+        </div>
+
+        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--gn)">
+            <div style="font-size:24px;font-weight:900;color:var(--gn);margin-bottom:4px">4</div>
+            <div style="font-weight:700;margin-bottom:6px">Real Financial Data + Historical Precedent</div>
+            <div style="font-size:13px;color:var(--mt);line-height:1.6">For each recommended ticker, ThetaFlow pulls <strong>live prices from Yahoo Finance</strong>, computes 30-day projection cones using Geometric Brownian Motion, and references <strong>historical precedents</strong> — what happened to these stocks the last time a similar event occurred.</div>
+        </div>
+
+        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--yl)">
+            <div style="font-size:24px;font-weight:900;color:var(--yl);margin-bottom:4px">5</div>
+            <div style="font-weight:700;margin-bottom:6px">Actionable Output with Risk Assessment</div>
+            <div style="font-size:13px;color:var(--mt);line-height:1.6">Each analysis includes: <strong>BUY/SHORT/WATCH</strong> signals, price targets with risk/reward ratios, quantified earnings impact, compounding catalysts, and a <strong>contrarian view</strong> — what could go wrong. Every recommendation is tracked in the Scorecard for accountability.</div>
+        </div>
+    </div>
+
+    <div style="background:var(--s2);border-radius:12px;padding:20px;margin-top:20px;border:1px solid var(--bd)">
+        <div style="font-weight:700;margin-bottom:8px">Data Sources</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:12px;color:var(--mt)">
+            <div>📰 <strong>WSJ RSS</strong> — Live headlines from Technology, Markets, Business, Economy</div>
+            <div>📊 <strong>Yahoo Finance</strong> — Prices, 52-week range, volume for all tickers</div>
+            <div>🏛️ <strong>SEC EDGAR</strong> — 8-K material event filings</div>
+            <div>📡 <strong>NewsAPI</strong> — Cross-source news aggregation</div>
+            <div>🤖 <strong>Claude AI</strong> — Investment analysis with quantified reasoning</div>
+            <div>📈 <strong>GBM Projection</strong> — Geometric Brownian Motion volatility cones</div>
+        </div>
+    </div>
+
+    <div style="margin-top:20px;text-align:center;">
+        <button class="send" style="padding:14px 32px" onclick="showView('analyze')">Start Analyzing →</button>
+    </div>
 </div>
 </div>
 
@@ -684,43 +741,69 @@ function rmTyping(){const e=document.getElementById('typing');if(e)e.remove()}
 function renderAnalysis(d){
     let h='<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub">';
 
-    // Verdict banner
+    // ── SECTION 1: Verdict — big, clear, unmistakable ──
     const topDir=d.top_picks?.[0]?.direction||'bullish';
     const topConv=d.top_picks?.[0]?.conviction||0;
-    const verdictText=topConv>.7?'Strong Conviction':topConv>.4?'Moderate Conviction':'Monitoring';
-    h+=`<div class="verdict ${topDir==='bullish'?'bull':'bear'}">
-        <span>${topDir==='bullish'?'🟢 BULLISH':'🔴 BEARISH'}</span>
-        <span style="flex:1;font-weight:400;font-size:13px;color:var(--mt)">${verdictText}</span>
-        <div class="verdict-bar"><div class="verdict-fill" style="width:${topConv*100}%;background:${topDir==='bullish'?'var(--gn)':'var(--rd)'}"></div></div>
-        <span style="font-size:13px">${(topConv*100).toFixed(0)}%</span>
+    const isBull=topDir==='bullish';
+    const verdictColor=isBull?'var(--gn)':'var(--rd)';
+    const verdictBg=isBull?'#10b98112':'#ef444412';
+    const verdictBorder=isBull?'#10b98130':'#ef444430';
+    const verdictWord=isBull?'BULLISH':'BEARISH';
+    const verdictIcon=isBull?'📈':'📉';
+    const convLabel=topConv>.7?'Strong':topConv>.4?'Moderate':'Low';
+
+    h+=`<div style="background:${verdictBg};border:1px solid ${verdictBorder};border-radius:12px;padding:16px 20px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:28px">${verdictIcon}</span>
+                <div>
+                    <div style="font-size:22px;font-weight:900;color:${verdictColor};letter-spacing:1px">${verdictWord}</div>
+                    <div style="font-size:12px;color:var(--mt)">${convLabel} conviction · ${d.ai_time_horizon||'short-term horizon'}</div>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:28px;font-weight:900;color:${verdictColor}">${(topConv*100).toFixed(0)}%</div>
+                <div style="font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.5px">Confidence</div>
+            </div>
+        </div>
+        <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${topConv*100}%;background:${verdictColor};border-radius:3px;transition:width .5s ease"></div>
+        </div>
     </div>`;
 
-    // Chain flow pills
+    // ── SECTION 2: Themes — labeled clearly ──
     if(d.chains?.length){
-        h+='<div class="chain-flow">';
-        d.chains.forEach((c,i)=>{
-            if(i>0) h+='<span class="flow-arrow">+</span>';
+        h+=`<div style="margin-bottom:14px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:6px">Investment Themes</div>
+            <div class="chain-flow">`;
+        d.chains.forEach(c=>{
             h+=`<span class="chain-pill" style="border-color:${c.theme_color};color:${c.theme_color}">${c.chain_name}</span>`;
         });
-        h+='</div>';
+        h+=`</div></div>`;
     }
 
-    // Obvious play dismissal
+    // ── SECTION 3: The Obvious Play (what everyone sees) ──
     if(d.obvious_play){
         const op=d.obvious_play;
-        const opDir=op.direction==='bullish'?'↑':'↓';
-        h+=`<div class="obvious">
-            <span class="obvious-tag">Priced In</span>
-            <span class="obvious-text"><span class="obvious-ticker">${op.ticker} ${opDir}</span> — ${op.summary}</span>
+        const opIcon=op.direction==='bullish'?'📈':'📉';
+        h+=`<div style="background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:14px;border:1px solid var(--bd);opacity:.65">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:4px">⏩ The Obvious Play — Already Priced In</div>
+            <div style="font-size:13px;color:var(--mt)"><strong style="color:var(--ac)">${op.ticker}</strong> ${opIcon} ${op.summary}</div>
         </div>`;
     }
 
-    // Summary — focused on what the market is missing
-    if(d.summary) h+=`<p style="font-size:14px;margin-bottom:14px;line-height:1.7">${d.summary}</p>`;
+    // ── SECTION 4: Summary (the key insight) ──
+    if(d.summary){
+        h+=`<div style="margin-bottom:16px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cy);margin-bottom:6px">💡 Key Insight</div>
+            <p style="font-size:14px;line-height:1.7;margin:0">${d.summary}</p>
+        </div>`;
+    }
 
-    // Historical precedents
+    // ── SECTION 5: Historical Precedents (what happened before) ──
     if(d.historical_precedents?.length){
-        h+=`<div class="section-hdr" style="color:var(--cy)">📜 Historical Precedent</div>`;
+        h+=`<div style="margin-bottom:14px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cy);margin-bottom:8px">📜 What Happened Last Time</div>`;
         d.historical_precedents.forEach(p=>{
             h+=`<div class="precedent-box">
                 <div class="prec-event">${p.event} <span class="prec-date">· ${p.date||''}</span></div>
@@ -730,18 +813,21 @@ function renderAnalysis(d){
                 }).join('')}</div>
             </div>`;
         });
+        h+=`</div>`;
     }
 
-    // Cross-catalyst overlay
+    // ── SECTION 6: Compounding Catalysts ──
     if(d.active_catalysts?.length){
         h+=`<div class="catalysts-box">
-            <div class="section-hdr" style="color:var(--pu);margin-bottom:4px">⚡ Compounding Catalysts</div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--pu);margin-bottom:6px">⚡ Other Forces in Play Right Now</div>
             ${d.active_catalysts.map(c=>`<div class="catalyst-item">${c}</div>`).join('')}
         </div>`;
     }
 
-    // Edge header
-    if(d.top_picks?.length) h+=`<div class="edge-header">🔍 Actionable Trades</div>`;
+    // ── SECTION 7: Trades (the actionable part) ──
+    if(d.top_picks?.length){
+        h+=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cy);margin-bottom:10px;display:flex;align-items:center;gap:6px">🎯 Recommended Trades <span style="font-weight:400;color:var(--mt)">· Non-obvious plays the market hasn't priced in</span></div>`;
+    }
 
     // Ticker cards
     if(d.top_picks?.length){
