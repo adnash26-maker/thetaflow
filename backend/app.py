@@ -99,19 +99,28 @@ def auth_required(tier_minimum=None):
 # ── Pages ──
 
 def _find_html(filename):
-    """Find and read an HTML file - tries every possible path."""
+    """Find and read an HTML file - tries every possible path.
+    Priority: THETAFLOW_FRONTEND env > backend dir > frontend sibling > cwd."""
+    _this_dir = os.path.dirname(os.path.abspath(__file__))
     candidates = [
         os.getenv("THETAFLOW_FRONTEND", ""),
-        os.path.dirname(os.path.abspath(__file__)),
+        _this_dir,  # backend/ dir (has copies)
+        os.path.join(_this_dir, "..", "frontend"),  # ../frontend/
         os.getcwd(),
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend"),
         os.path.join(os.getcwd(), "frontend"),
+        os.path.join(os.getcwd(), "backend"),
+        "/app/frontend",  # Railway common path
+        "/app/backend",
     ]
     for d in candidates:
-        path = os.path.join(d, filename) if d else ""
-        if path and os.path.isfile(path):
+        if not d:
+            continue
+        path = os.path.join(d, filename)
+        if os.path.isfile(path):
+            logger.debug(f"Found {filename} at {path}")
             with open(path, "r") as f:
                 return f.read()
+    logger.error(f"Could not find {filename} in any candidate path: {candidates}")
     return None
 
 @app.route("/")
@@ -132,21 +141,28 @@ def serve_dashboard():
 
 @app.route("/api/debug-paths")
 def debug_paths():
-    """Temporary debug route to find frontend directory on Railway."""
+    """Debug route to find frontend directory on Railway."""
     import glob
+    _this_dir = os.path.dirname(os.path.abspath(__file__))
     cwd = os.getcwd()
-    app_file = os.path.abspath(__file__)
-    candidates = {
+    info = {
         "cwd": cwd,
-        "app_file": app_file,
+        "app_file": os.path.abspath(__file__),
+        "this_dir": _this_dir,
         "env_frontend": os.getenv("THETAFLOW_FRONTEND", "not set"),
-        "cwd_contents": os.listdir(cwd) if os.path.isdir(cwd) else "not a dir",
+        "cwd_contents": sorted(os.listdir(cwd)) if os.path.isdir(cwd) else [],
+        "this_dir_contents": sorted(os.listdir(_this_dir)) if os.path.isdir(_this_dir) else [],
+        "dashboard_found": _find_html("dashboard.html") is not None,
+        "landing_found": _find_html("landing.html") is not None,
     }
-    # Search for dashboard.html
-    for root_dir in [cwd, os.path.dirname(app_file), "/app", "/opt"]:
-        for f in glob.glob(os.path.join(root_dir, "**", "dashboard.html"), recursive=True):
-            candidates[f"found_{f}"] = True
-    return jsonify(candidates)
+    # Search common paths
+    for search_dir in [cwd, _this_dir, "/app", os.path.join(cwd, "..")]:
+        try:
+            for f in glob.glob(os.path.join(search_dir, "**", "dashboard.html"), recursive=True):
+                info[f"found_{f}"] = True
+        except Exception:
+            pass
+    return jsonify(info)
 
 @app.route("/api/health")
 def health():
