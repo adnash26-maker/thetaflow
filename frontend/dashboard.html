@@ -4,340 +4,593 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ThetaFlow — Investment Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
-        :root{--bg:#0a0e17;--s1:#111827;--s2:#1a2234;--s3:#232d42;--bd:#1f2937;--tx:#e5e7eb;--mt:#9ca3af;--ac:#6366f1;--gn:#10b981;--rd:#ef4444;--yl:#f59e0b;--pu:#8b5cf6;--cy:#06b6d4}
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);line-height:1.5;height:100vh;display:flex;flex-direction:column}
-        .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--s1);border-bottom:1px solid var(--bd);flex-shrink:0}
-        .logo{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--ac),var(--cy));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .nav-r{display:flex;gap:8px}
-        .btn{padding:7px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:13px;transition:all .2s}
-        .btn:hover{border-color:var(--ac)}
+        :root {
+            --bg: #06090f;
+            --bg2: #0b1018;
+            --s1: #0f1520;
+            --s2: #151d2e;
+            --s3: #1b2540;
+            --bd: #1c2438;
+            --bd2: #263354;
+            --tx: #e8ecf4;
+            --tx2: #c0c8d8;
+            --mt: #7a8aa8;
+            --ac: #6c5ce7;
+            --ac2: #a29bfe;
+            --gn: #00d68f;
+            --gn2: #00b87a;
+            --rd: #ff6b6b;
+            --rd2: #ee5a5a;
+            --yl: #feca57;
+            --cy: #0abde3;
+            --cy2: #48dbfb;
+            --pu: #a855f7;
+            --glass: rgba(15, 21, 32, 0.7);
+            --glow: 0 0 30px rgba(108, 92, 231, 0.08);
+            --r1: 8px;
+            --r2: 12px;
+            --r3: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--tx);
+            line-height: 1.5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
 
-        /* Chat */
-        .chat{flex:1;overflow-y:auto;padding:20px 0}
-        .chat-w{max-width:880px;margin:0 auto;padding:0 20px}
-        .msg{margin-bottom:24px;animation:fi .3s ease}
-        @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        .msg-u{display:flex;justify-content:flex-end}
-        .msg-u .bub{background:var(--ac);border-radius:16px 16px 4px 16px;max-width:70%;padding:12px 16px;font-size:15px}
-        .msg-a .lbl{font-size:11px;color:var(--mt);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-        .msg-a .bub{background:var(--s1);border:1px solid var(--bd);border-radius:4px 16px 16px 16px;padding:20px;overflow:hidden}
+        /* ── Nav ── */
+        .nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; height: 52px;
+            background: var(--glass);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid var(--bd);
+            flex-shrink: 0; z-index: 50;
+            position: relative;
+        }
+        .nav::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(108,92,231,0.3), rgba(10,189,227,0.2), transparent);
+        }
+        .logo {
+            font-size: 18px; font-weight: 900; letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--ac2), var(--cy));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            cursor: pointer; user-select: none;
+        }
+        .nav-left { display: flex; align-items: center; gap: 12px; position: relative }
+        .menu-btn {
+            background: none; border: 1px solid var(--bd); border-radius: var(--r1);
+            color: var(--mt); cursor: pointer; padding: 5px 7px; font-size: 14px; line-height: 1;
+            transition: all .2s;
+        }
+        .menu-btn:hover { border-color: var(--ac); color: var(--tx); background: var(--s2) }
+        .nav-drop {
+            display: none; position: absolute; top: 100%; left: 0; margin-top: 8px;
+            background: var(--s1); border: 1px solid var(--bd2); border-radius: var(--r2);
+            min-width: 220px; padding: 6px; z-index: 100;
+            box-shadow: 0 12px 40px rgba(0,0,0,.5), var(--glow);
+        }
+        .nav-drop.open { display: block }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+            border-radius: var(--r1); cursor: pointer; font-size: 13px; font-weight: 500;
+            color: var(--mt); transition: all .15s;
+        }
+        .nav-item:hover { background: var(--s2); color: var(--tx) }
+        .nav-item.active { background: rgba(108,92,231,0.12); color: var(--ac2) }
+        .nav-item-icon { font-size: 15px; width: 20px; text-align: center }
+        .nav-sep { height: 1px; background: var(--bd); margin: 4px 8px }
+        .nav-r { display: flex; gap: 8px }
+        .btn {
+            padding: 6px 14px; border-radius: var(--r1); border: 1px solid var(--bd);
+            background: var(--s2); color: var(--tx2); cursor: pointer; font-size: 12px;
+            font-weight: 600; font-family: inherit; transition: all .2s;
+        }
+        .btn:hover { border-color: var(--ac); color: var(--tx); background: var(--s3) }
 
-        /* Verdict Banner */
-        .verdict{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:10px;margin-bottom:16px;font-weight:700;font-size:15px}
-        .verdict.bull{background:linear-gradient(135deg,#10b98115,#10b98108);border:1px solid #10b98130}
-        .verdict.bear{background:linear-gradient(135deg,#ef444415,#ef444408);border:1px solid #ef444430}
-        .verdict-bar{flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden}
-        .verdict-fill{height:100%;border-radius:3px;transition:width .5s ease}
+        /* ── Chat ── */
+        .chat { flex: 1; overflow-y: auto; padding: 20px 0 }
+        .chat-w { max-width: 880px; margin: 0 auto; padding: 0 20px }
+        .msg { margin-bottom: 24px; animation: fi .35s ease }
+        @keyframes fi { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
+        .msg-u { display: flex; justify-content: flex-end }
+        .msg-u .bub {
+            background: linear-gradient(135deg, var(--ac), #5a4bd4);
+            border-radius: 18px 18px 4px 18px; max-width: 70%; padding: 12px 18px;
+            font-size: 14px; font-weight: 500; box-shadow: 0 4px 20px rgba(108,92,231,0.2);
+        }
+        .msg-a .lbl {
+            font-size: 10px; color: var(--mt); margin-bottom: 6px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .8px;
+        }
+        .msg-a .bub {
+            background: var(--s1); border: 1px solid var(--bd);
+            border-radius: 4px 18px 18px 18px; padding: 22px; overflow: hidden;
+            box-shadow: var(--glow);
+        }
 
-        /* Obvious Play Dismissal */
-        .obvious{background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;border:1px solid var(--bd);opacity:.7}
-        .obvious-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);background:var(--bg);padding:2px 6px;border-radius:3px;flex-shrink:0}
-        .obvious-text{font-size:12px;color:var(--mt);flex:1}
-        .obvious-ticker{font-weight:800;color:var(--ac)}
+        /* ── Verdict Banner ── */
+        .verdict-wrap {
+            border-radius: var(--r2); margin-bottom: 18px; overflow: hidden;
+            position: relative;
+        }
+        .verdict-wrap::before {
+            content: ''; position: absolute; inset: 0; border-radius: var(--r2);
+            padding: 1px;
+            background: linear-gradient(135deg, var(--gn), transparent 60%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+            pointer-events: none;
+        }
+        .verdict-wrap.bear::before {
+            background: linear-gradient(135deg, var(--rd), transparent 60%);
+        }
+        .verdict-inner {
+            padding: 18px 22px;
+            background: linear-gradient(135deg, rgba(0,214,143,0.06), transparent);
+        }
+        .verdict-wrap.bear .verdict-inner {
+            background: linear-gradient(135deg, rgba(255,107,107,0.06), transparent);
+        }
 
-        /* Hidden Edge Header */
-        .edge-header{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--cy);margin-bottom:10px;display:flex;align-items:center;gap:6px}
-        .section-hdr{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
-        .order-badge{font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px;letter-spacing:.3px}
-        .order-badge.o2{background:#06b6d420;color:var(--cy)}
-        .order-badge.o3{background:#8b5cf620;color:var(--pu)}
+        /* ── Obvious Play ── */
+        .obvious {
+            background: var(--s2); border-radius: var(--r1); padding: 10px 14px;
+            margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+            border: 1px solid var(--bd); opacity: .6;
+        }
+        .obvious-tag {
+            font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+            color: var(--mt); background: var(--bg); padding: 2px 6px; border-radius: 3px; flex-shrink: 0;
+        }
 
-        /* Precedent Box */
-        .precedent-box{background:var(--s2);border-radius:8px;padding:12px 14px;margin-bottom:14px;border:1px solid var(--bd);border-left:3px solid var(--cy)}
-        .prec-event{font-size:12px;font-weight:600;margin-bottom:6px}
-        .prec-date{color:var(--mt);font-weight:400}
-        .prec-outcomes{display:flex;flex-wrap:wrap;gap:6px}
-        .prec-outcome{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg);display:flex;align-items:center;gap:4px}
+        /* ── Section Headers ── */
+        .sec-hdr {
+            font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+        }
+        .order-badge {
+            font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 4px; letter-spacing: .3px;
+        }
+        .order-badge.o2 { background: rgba(10,189,227,0.12); color: var(--cy) }
+        .order-badge.o3 { background: rgba(168,85,247,0.12); color: var(--pu) }
 
-        /* Cross Catalysts */
-        .catalysts-box{background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:14px;border:1px solid var(--bd);border-left:3px solid var(--pu)}
-        .catalyst-item{font-size:12px;color:var(--mt);padding:2px 0;line-height:1.5}
-        .catalyst-item::before{content:'⚡';margin-right:6px}
+        /* ── Precedent Box ── */
+        .precedent-box {
+            background: var(--s2); border-radius: var(--r1); padding: 12px 14px;
+            margin-bottom: 10px; border: 1px solid var(--bd);
+            border-left: 3px solid var(--cy);
+        }
+        .prec-event { font-size: 12px; font-weight: 600; margin-bottom: 6px }
+        .prec-date { color: var(--mt); font-weight: 400 }
+        .prec-outcomes { display: flex; flex-wrap: wrap; gap: 6px }
+        .prec-outcome {
+            font-size: 11px; padding: 3px 8px; border-radius: 4px;
+            background: var(--bg); display: flex; align-items: center; gap: 4px;
+        }
 
-        /* Earnings Impact in ticker card */
-        .tk-earnings{padding:0 16px 10px;font-size:11px;font-family:monospace;color:var(--cy);background:var(--bg);margin:0 16px 8px;border-radius:6px;padding:8px 10px;line-height:1.6}
-        .tk-precedent{padding:0 16px 10px;font-size:11px;color:var(--pu)}
+        /* ── Cross Catalysts ── */
+        .catalysts-box {
+            background: var(--s2); border-radius: var(--r1); padding: 10px 14px;
+            margin-bottom: 14px; border: 1px solid var(--bd); border-left: 3px solid var(--pu);
+        }
+        .catalyst-item { font-size: 12px; color: var(--mt); padding: 2px 0; line-height: 1.5 }
+        .catalyst-item::before { content: '\26A1'; margin-right: 6px }
 
-        /* Chain Flow */
-        .chain-flow{display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-        .chain-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid}
-        .flow-arrow{color:var(--mt);font-size:18px}
+        /* ── Chain Flow ── */
+        .chain-flow { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; flex-wrap: wrap }
+        .chain-pill {
+            padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700;
+            border: 1px solid; letter-spacing: .2px;
+        }
 
-        /* Ticker Card */
-        .tk-card{background:var(--s2);border-radius:10px;margin-bottom:10px;overflow:hidden;border:1px solid var(--bd);transition:border-color .2s}
-        .tk-card:hover{border-color:var(--ac)}
-        .tk-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer}
-        .tk-left{display:flex;align-items:center;gap:10px}
-        .tk-dir{width:8px;height:8px;border-radius:50%}
-        .tk-dir.bull{background:var(--gn)}
-        .tk-dir.bear{background:var(--rd)}
-        .tk-sym{font-weight:800;font-size:16px;color:var(--ac)}
-        .tk-name{color:var(--mt);font-size:13px}
-        .tk-action{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:800;letter-spacing:.5px}
-        .tk-action.buy{background:#10b98120;color:var(--gn)}
-        .tk-action.sell,.tk-action.short{background:#ef444420;color:var(--rd)}
-        .tk-action.watch{background:#f59e0b20;color:var(--yl)}
-        .tk-action.avoid{background:#6b728020;color:var(--mt)}
-        .tk-right{text-align:right}
-        .tk-price{font-weight:700;font-size:16px}
-        .tk-chg{font-size:13px}
-        .tk-target{font-size:11px;color:var(--mt);margin-top:2px}
+        /* ── Ticker Card ── */
+        .tk-card {
+            background: var(--s1); border-radius: var(--r2); margin-bottom: 12px;
+            overflow: hidden; border: 1px solid var(--bd);
+            transition: border-color .2s, box-shadow .3s;
+        }
+        .tk-card:hover { border-color: var(--bd2); box-shadow: var(--glow) }
+        .tk-head {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 18px; cursor: pointer;
+        }
+        .tk-left { display: flex; align-items: center; gap: 10px }
+        .tk-dir { width: 8px; height: 8px; border-radius: 50% }
+        .tk-dir.bull { background: var(--gn); box-shadow: 0 0 8px rgba(0,214,143,0.4) }
+        .tk-dir.bear { background: var(--rd); box-shadow: 0 0 8px rgba(255,107,107,0.4) }
+        .tk-sym { font-weight: 900; font-size: 16px; color: var(--ac2); letter-spacing: .5px }
+        .tk-name { color: var(--mt); font-size: 12px; font-weight: 500 }
+        .tk-action {
+            padding: 3px 10px; border-radius: 5px; font-size: 10px;
+            font-weight: 800; letter-spacing: .5px;
+        }
+        .tk-action.buy { background: rgba(0,214,143,0.12); color: var(--gn) }
+        .tk-action.sell, .tk-action.short { background: rgba(255,107,107,0.12); color: var(--rd) }
+        .tk-action.watch { background: rgba(254,202,87,0.12); color: var(--yl) }
+        .tk-action.avoid { background: rgba(122,138,168,0.1); color: var(--mt) }
+        .tk-right { text-align: right }
+        .tk-price { font-weight: 800; font-size: 16px; font-family: 'JetBrains Mono', monospace }
+        .tk-chg { font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600 }
+        .tk-target { font-size: 10px; color: var(--mt); margin-top: 2px; font-weight: 500 }
 
-        /* Metrics Grid */
-        .metrics{display:flex;gap:1px;background:var(--bd);border-radius:8px;overflow:hidden;margin:0 16px 12px}
-        .metric{background:var(--s3);padding:8px 10px;text-align:center;flex:1;min-width:0}
-        .metric-val{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .metric-lbl{font-size:9px;color:var(--mt);text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
+        /* ── Metrics Grid ── */
+        .metrics {
+            display: flex; gap: 1px; background: var(--bd); border-radius: var(--r1);
+            overflow: hidden; margin: 0 18px 12px;
+        }
+        .metric {
+            background: var(--s2); padding: 8px 10px; text-align: center; flex: 1; min-width: 0;
+        }
+        .metric-val {
+            font-weight: 800; font-size: 13px; font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .metric-lbl {
+            font-size: 8px; color: var(--mt); text-transform: uppercase;
+            letter-spacing: .5px; margin-top: 2px; font-weight: 600;
+        }
 
-        /* Analysis Text */
-        .analysis{padding:0 16px 14px;font-size:13px;line-height:1.7;color:var(--mt)}
-        .analysis strong{color:var(--tx)}
+        /* ── Analysis Text ── */
+        .analysis { padding: 0 18px 14px; font-size: 13px; line-height: 1.7; color: var(--tx2) }
+        .analysis strong { color: var(--tx) }
 
-        /* Price Chart */
-        .tk-chart{padding:4px 16px 12px}
-        .tk-chart canvas{width:100%!important;height:200px!important;border-radius:8px}
-        .chart-legend{display:flex;gap:12px;justify-content:center;padding:6px 0;font-size:10px;color:var(--mt)}
-        .chart-legend span{display:flex;align-items:center;gap:4px}
-        .chart-legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+        /* ── Earnings & Precedent ── */
+        .tk-earnings {
+            font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--cy);
+            background: var(--bg2); margin: 0 18px 8px; border-radius: var(--r1);
+            padding: 8px 12px; line-height: 1.6;
+        }
+        .tk-precedent { padding: 0 18px 10px; font-size: 11px; color: var(--pu) }
 
-        /* Chain Context */
-        .tk-ctx{padding:8px 16px 12px;font-size:11px;color:var(--mt);display:flex;gap:8px;align-items:center;border-top:1px solid var(--bd)}
-        .ctx-badge{padding:2px 8px;border-radius:4px;background:var(--bg);font-weight:600}
-        .ctx-badge.imm{color:var(--yl)}
-        .ctx-badge.short{color:var(--cy)}
-        .ctx-badge.med{color:var(--ac)}
+        /* ── Chart ── */
+        .tk-chart { padding: 4px 18px 12px }
+        .tk-chart canvas { width: 100% !important; height: 200px !important; border-radius: var(--r1) }
+        .chart-legend {
+            display: flex; gap: 12px; justify-content: center; padding: 6px 0;
+            font-size: 10px; color: var(--mt); font-weight: 500;
+        }
+        .chart-legend span { display: flex; align-items: center; gap: 4px }
+        .chart-legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block }
 
-        /* Layer Pipeline */
-        .pipeline{margin-top:16px}
-        .pipe-title{font-size:12px;font-weight:700;color:var(--pu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-        .pipe-layer{display:flex;align-items:stretch;margin-bottom:6px}
-        .pipe-dot{width:3px;background:var(--bd);margin-right:12px;border-radius:2px;position:relative}
-        .pipe-dot::before{content:'';position:absolute;top:12px;left:-3px;width:9px;height:9px;border-radius:50%;background:var(--pu);border:2px solid var(--bg)}
-        .pipe-content{flex:1;background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:2px}
-        .pipe-layer-name{font-weight:700;font-size:12px;margin-bottom:4px}
-        .pipe-tickers{display:flex;flex-wrap:wrap;gap:6px}
-        .pipe-tk{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg);display:flex;align-items:center;gap:4px}
-        .pipe-tk .s{font-weight:700;color:var(--ac)}
-        .pipe-tk .upside{font-weight:700;margin-left:2px}
+        /* ── Context Bar ── */
+        .tk-ctx {
+            padding: 8px 18px 12px; font-size: 10px; color: var(--mt);
+            display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--bd); font-weight: 500;
+        }
+        .ctx-badge {
+            padding: 2px 8px; border-radius: 4px; background: var(--bg2); font-weight: 700;
+        }
+        .ctx-badge.imm { color: var(--yl) }
+        .ctx-badge.short { color: var(--cy) }
+        .ctx-badge.med { color: var(--ac2) }
 
-        /* Suggestions */
-        .sugg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-        .sugg-pill{padding:8px 14px;border-radius:16px;border:1px solid var(--bd);background:var(--s1);cursor:pointer;font-size:12px;transition:all .2s;max-width:100%}
-        .sugg-pill:hover{border-color:var(--ac);transform:translateY(-1px)}
+        /* ── Pipeline ── */
+        .pipeline { margin-top: 16px }
+        .pipe-title {
+            font-size: 11px; font-weight: 800; color: var(--pu);
+            text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .pipe-layer { display: flex; align-items: stretch; margin-bottom: 6px }
+        .pipe-dot {
+            width: 3px; background: var(--bd); margin-right: 12px; border-radius: 2px; position: relative;
+        }
+        .pipe-dot::before {
+            content: ''; position: absolute; top: 12px; left: -3px; width: 9px; height: 9px;
+            border-radius: 50%; background: var(--pu); border: 2px solid var(--bg);
+        }
+        .pipe-content {
+            flex: 1; background: var(--s2); border-radius: var(--r1);
+            padding: 10px 14px; margin-bottom: 2px;
+        }
+        .pipe-layer-name { font-weight: 700; font-size: 12px; margin-bottom: 4px }
+        .pipe-tickers { display: flex; flex-wrap: wrap; gap: 6px }
+        .pipe-tk {
+            font-size: 11px; padding: 3px 8px; border-radius: 4px;
+            background: var(--bg2); display: flex; align-items: center; gap: 4px;
+        }
+        .pipe-tk .s { font-weight: 800; color: var(--ac2) }
+        .pipe-tk .upside { font-weight: 700; margin-left: 2px }
 
-        /* Scorecard */
-        .scorecard{margin-bottom:14px}
-        .sc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-        .sc-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mt)}
-        .sc-stats{display:flex;gap:12px;font-size:11px}
-        .sc-stat{display:flex;align-items:center;gap:4px}
-        .sc-stat strong{font-weight:800}
-        .sc-list{display:flex;flex-direction:column;gap:4px}
-        .sc-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--s2);border-radius:6px;font-size:12px;border:1px solid var(--bd);cursor:pointer;transition:border-color .2s}
-        .sc-row:hover{border-color:var(--ac)}
-        .sc-ticker{font-weight:800;color:var(--ac);width:48px}
-        .sc-action{font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px}
-        .sc-action.buy{background:#10b98120;color:var(--gn)}
-        .sc-action.short{background:#ef444420;color:var(--rd)}
-        .sc-entry{color:var(--mt);flex:1;font-size:11px}
-        .sc-pnl{font-weight:800;min-width:55px;text-align:right;font-family:monospace}
-        .sc-check{font-size:10px}
-        .sc-bar{height:3px;border-radius:2px;margin-top:4px}
-        .sc-headline{font-size:10px;color:var(--mt);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        /* ── Portfolio Allocation (new) ── */
+        .alloc-section {
+            margin-top: 18px; background: var(--s2); border-radius: var(--r2);
+            padding: 18px; border: 1px solid var(--bd);
+        }
+        .alloc-input-row {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+        }
+        .alloc-input-wrap {
+            position: relative; flex: 1; max-width: 260px;
+        }
+        .alloc-input-wrap .dollar-sign {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            font-size: 14px; font-weight: 700; color: var(--mt);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .alloc-input {
+            width: 100%; padding: 10px 12px 10px 28px; font-size: 14px;
+            font-family: 'JetBrains Mono', monospace; font-weight: 700;
+            background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r1);
+            color: var(--tx); outline: none;
+        }
+        .alloc-input:focus { border-color: var(--ac) }
+        .alloc-btn {
+            padding: 10px 18px; border-radius: var(--r1); border: 1px solid var(--ac);
+            background: rgba(108,92,231,0.12); color: var(--ac2);
+            font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer;
+            transition: all .2s;
+        }
+        .alloc-btn:hover { background: rgba(108,92,231,0.2) }
+        .alloc-table { width: 100%; border-collapse: collapse }
+        .alloc-table th {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .5px; color: var(--mt); padding: 6px 8px;
+            text-align: left; border-bottom: 1px solid var(--bd);
+        }
+        .alloc-table th:nth-child(n+3) { text-align: right }
+        .alloc-table td {
+            padding: 8px; font-size: 12px; border-bottom: 1px solid var(--bd);
+        }
+        .alloc-table td:nth-child(n+3) {
+            text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+        }
+        .alloc-bar {
+            height: 4px; border-radius: 2px; background: var(--bg);
+            overflow: hidden; margin-top: 4px;
+        }
+        .alloc-bar-fill { height: 100%; border-radius: 2px; transition: width .4s ease }
 
-        /* Intro features */
-        .intro-features{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-        .intro-feat{background:var(--s2);border-radius:8px;padding:10px 12px;border:1px solid var(--bd)}
-        .intro-feat-icon{font-size:16px;margin-bottom:4px}
-        .intro-feat-title{font-size:11px;font-weight:700;margin-bottom:2px}
-        .intro-feat-desc{font-size:10px;color:var(--mt);line-height:1.4}
+        /* ── Suggestions ── */
+        .sugg { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px }
+        .sugg-pill {
+            padding: 8px 14px; border-radius: 20px; border: 1px solid var(--bd);
+            background: var(--s1); cursor: pointer; font-size: 12px; font-weight: 500;
+            transition: all .2s; max-width: 100%;
+        }
+        .sugg-pill:hover { border-color: var(--ac); transform: translateY(-1px); box-shadow: var(--glow) }
 
-        /* Input */
-        .input-bar{padding:12px 20px;background:var(--s1);border-top:1px solid var(--bd);flex-shrink:0}
-        .input-w{max-width:880px;margin:0 auto;display:flex;gap:8px}
-        .input-w input{flex:1;padding:13px 16px;background:var(--s2);border:1px solid var(--bd);border-radius:12px;color:var(--tx);font-size:15px;outline:none}
-        .input-w input:focus{border-color:var(--ac)}
-        .input-w input::placeholder{color:#4b5563}
-        .send{padding:13px 22px;border-radius:12px;border:none;background:var(--ac);color:white;font-size:14px;font-weight:600;cursor:pointer}
-        .send:disabled{opacity:.5}
+        /* ── Scorecard ── */
+        .scorecard { margin-bottom: 14px }
+        .sc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px }
+        .sc-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--mt) }
+        .sc-stats { display: flex; gap: 12px; font-size: 11px }
+        .sc-stat { display: flex; align-items: center; gap: 4px }
+        .sc-stat strong { font-weight: 800 }
+        .sc-list { display: flex; flex-direction: column; gap: 4px }
+        .sc-row {
+            display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+            background: var(--s2); border-radius: var(--r1); font-size: 12px;
+            border: 1px solid var(--bd); cursor: pointer; transition: border-color .2s;
+        }
+        .sc-row:hover { border-color: var(--ac) }
+        .sc-ticker { font-weight: 800; color: var(--ac2); width: 48px }
+        .sc-action { font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 3px }
+        .sc-action.buy { background: rgba(0,214,143,0.12); color: var(--gn) }
+        .sc-action.short { background: rgba(255,107,107,0.12); color: var(--rd) }
+        .sc-entry { color: var(--mt); flex: 1; font-size: 11px }
+        .sc-pnl {
+            font-weight: 800; min-width: 55px; text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .sc-bar { height: 3px; border-radius: 2px; margin-top: 4px }
 
-        .typing{display:flex;gap:4px;padding:8px 0}
-        .typing span{width:6px;height:6px;background:var(--mt);border-radius:50%;animation:bounce 1.4s infinite}
-        .typing span:nth-child(2){animation-delay:.2s}
-        .typing span:nth-child(3){animation-delay:.4s}
-        @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
-        .disc{font-size:10px;color:#374151;margin-top:12px;font-style:italic}
+        /* ── Intro features ── */
+        .intro-features { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px }
+        .intro-feat {
+            background: var(--s2); border-radius: var(--r1); padding: 12px;
+            border: 1px solid var(--bd); transition: border-color .2s;
+        }
+        .intro-feat:hover { border-color: var(--bd2) }
+        .intro-feat-icon { font-size: 18px; margin-bottom: 6px }
+        .intro-feat-title { font-size: 11px; font-weight: 700; margin-bottom: 2px }
+        .intro-feat-desc { font-size: 10px; color: var(--mt); line-height: 1.4 }
 
-        /* ── Nav Menu ── */
-        .nav-left{display:flex;align-items:center;gap:12px;position:relative}
-        .menu-btn{background:none;border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;padding:6px 8px;font-size:16px;line-height:1;transition:all .2s}
-        .menu-btn:hover{border-color:var(--ac);background:var(--s2)}
-        .nav-drop{display:none;position:absolute;top:100%;left:0;margin-top:8px;background:var(--s1);border:1px solid var(--bd);border-radius:10px;min-width:220px;padding:6px;z-index:100;box-shadow:0 8px 30px rgba(0,0,0,.4)}
-        .nav-drop.open{display:block}
-        .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--mt);transition:all .15s}
-        .nav-item:hover{background:var(--s2);color:var(--tx)}
-        .nav-item.active{background:var(--ac)15;color:var(--ac)}
-        .nav-item-icon{font-size:16px;width:20px;text-align:center}
-        .nav-sep{height:1px;background:var(--bd);margin:4px 8px}
+        /* ── Progress Indicator (streaming) ── */
+        .stream-progress {
+            margin-bottom: 16px;
+        }
+        .stream-bar-track {
+            height: 3px; background: var(--bg2); border-radius: 2px; overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .stream-bar-fill {
+            height: 100%; border-radius: 2px; transition: width .6s ease;
+            background: linear-gradient(90deg, var(--ac), var(--cy));
+        }
+        .stream-msg {
+            font-size: 11px; color: var(--mt); font-weight: 500;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .stream-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--ac); animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .3 } }
+
+        /* ── Input ── */
+        .input-bar {
+            padding: 12px 20px; flex-shrink: 0;
+            background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--bd);
+        }
+        .input-w { max-width: 880px; margin: 0 auto; display: flex; gap: 8px }
+        .input-w input {
+            flex: 1; padding: 13px 18px; background: var(--s1); border: 1px solid var(--bd);
+            border-radius: var(--r3); color: var(--tx); font-size: 14px; font-weight: 500;
+            font-family: inherit; outline: none; transition: border-color .2s;
+        }
+        .input-w input:focus { border-color: var(--ac); box-shadow: 0 0 20px rgba(108,92,231,0.1) }
+        .input-w input::placeholder { color: #3a4460 }
+        .send {
+            padding: 13px 24px; border-radius: var(--r3); border: none;
+            background: linear-gradient(135deg, var(--ac), #5a4bd4);
+            color: white; font-size: 13px; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: all .2s; letter-spacing: .3px;
+            box-shadow: 0 4px 15px rgba(108,92,231,0.3);
+        }
+        .send:hover { box-shadow: 0 4px 20px rgba(108,92,231,0.5); transform: translateY(-1px) }
+        .send:disabled { opacity: .4; transform: none; box-shadow: none }
+
+        .typing { display: flex; gap: 4px; padding: 8px 0 }
+        .typing span {
+            width: 6px; height: 6px; background: var(--mt); border-radius: 50%;
+            animation: bounce 1.4s infinite;
+        }
+        .typing span:nth-child(2) { animation-delay: .2s }
+        .typing span:nth-child(3) { animation-delay: .4s }
+        @keyframes bounce { 0%, 80%, 100% { transform: translateY(0) } 40% { transform: translateY(-8px) } }
+        .disc { font-size: 10px; color: #2a3350; margin-top: 12px; font-style: italic }
 
         /* ── Views ── */
-        .view{display:none;flex:1;overflow-y:auto}
-        .view.active{display:flex;flex-direction:column}
-        .view-content{max-width:920px;margin:0 auto;padding:20px;width:100%}
-        .view-title{font-size:20px;font-weight:800;margin-bottom:4px}
-        .view-sub{font-size:13px;color:var(--mt);margin-bottom:20px}
+        .view { display: none; flex: 1; overflow-y: auto }
+        .view.active { display: flex; flex-direction: column }
+        .view-content { max-width: 920px; margin: 0 auto; padding: 24px; width: 100% }
+        .view-title { font-size: 22px; font-weight: 900; margin-bottom: 4px; letter-spacing: -0.3px }
+        .view-sub { font-size: 13px; color: var(--mt); margin-bottom: 20px }
 
-        /* Stock Picks */
-        .picks-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-        .pick-card{background:var(--s2);border-radius:10px;padding:14px;border:1px solid var(--bd);cursor:pointer;transition:border-color .2s}
-        .pick-card:hover{border-color:var(--ac)}
-        .pick-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-        .pick-ticker{font-weight:800;font-size:16px;color:var(--ac)}
-        .pick-price{font-weight:700;font-size:14px}
-        .pick-company{font-size:11px;color:var(--mt);margin-bottom:6px}
-        .pick-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-        .pick-chain{font-size:10px;color:var(--mt);padding:2px 6px;border-radius:4px;background:var(--bg)}
-        .pick-filters{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-        .pick-filter{padding:6px 14px;border-radius:16px;border:1px solid var(--bd);background:var(--s1);cursor:pointer;font-size:12px;transition:all .2s}
-        .pick-filter:hover,.pick-filter.active{border-color:var(--ac);color:var(--ac)}
+        /* ── Stock Picks ── */
+        .picks-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px }
+        .pick-card {
+            background: var(--s1); border-radius: var(--r2); padding: 16px;
+            border: 1px solid var(--bd); cursor: pointer; transition: all .2s;
+        }
+        .pick-card:hover { border-color: var(--bd2); box-shadow: var(--glow) }
+        .pick-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px }
+        .pick-ticker { font-weight: 900; font-size: 16px; color: var(--ac2) }
+        .pick-price { font-weight: 800; font-size: 14px; font-family: 'JetBrains Mono', monospace }
+        .pick-company { font-size: 11px; color: var(--mt); margin-bottom: 6px }
+        .pick-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap }
+        .pick-chain { font-size: 10px; color: var(--mt); padding: 2px 6px; border-radius: 4px; background: var(--bg2) }
+        .pick-filters { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap }
+        .pick-filter {
+            padding: 6px 14px; border-radius: 20px; border: 1px solid var(--bd);
+            background: var(--s1); cursor: pointer; font-size: 12px; font-weight: 600;
+            font-family: inherit; transition: all .2s;
+        }
+        .pick-filter:hover, .pick-filter.active { border-color: var(--ac); color: var(--ac2) }
 
-        /* Portfolio */
-        .port-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
-        .port-stat{background:var(--s2);border-radius:10px;padding:16px;text-align:center;border:1px solid var(--bd)}
-        .port-stat-val{font-size:24px;font-weight:800;color:var(--ac)}
-        .port-stat-lbl{font-size:11px;color:var(--mt);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
-        .chain-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
-        .chain-bar-row{display:flex;align-items:center;gap:12px}
-        .chain-bar-name{font-size:12px;font-weight:600;min-width:140px}
-        .chain-bar-track{flex:1;height:24px;background:var(--bg);border-radius:6px;overflow:hidden;position:relative}
-        .chain-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:white;transition:width .5s ease}
-        .chain-bar-count{font-size:12px;color:var(--mt);min-width:30px;text-align:right}
+        /* ── Portfolio ── */
+        .port-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px }
+        .port-stat {
+            background: var(--s1); border-radius: var(--r2); padding: 18px;
+            text-align: center; border: 1px solid var(--bd);
+        }
+        .port-stat-val {
+            font-size: 28px; font-weight: 900; color: var(--ac2);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .port-stat-lbl {
+            font-size: 10px; color: var(--mt); margin-top: 4px;
+            text-transform: uppercase; letter-spacing: .5px; font-weight: 600;
+        }
+        .chain-bars { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px }
+        .chain-bar-row { display: flex; align-items: center; gap: 12px }
+        .chain-bar-name { font-size: 12px; font-weight: 600; min-width: 140px }
+        .chain-bar-track { flex: 1; height: 24px; background: var(--bg2); border-radius: 6px; overflow: hidden; position: relative }
+        .chain-bar-fill {
+            height: 100%; border-radius: 6px; display: flex; align-items: center;
+            padding-left: 8px; font-size: 11px; font-weight: 700; color: white;
+            transition: width .5s ease;
+        }
 
-        /* Trending */
-        .trend-section{margin-bottom:24px}
-        .trend-section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:10px}
-        .trend-card{background:var(--s2);border-radius:8px;padding:12px;margin-bottom:6px;border:1px solid var(--bd);display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .2s}
-        .trend-card:hover{border-color:var(--ac)}
-        .trend-ticker{font-weight:800;color:var(--ac);min-width:48px}
-        .trend-body{flex:1;min-width:0}
-        .trend-headline{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .trend-meta{font-size:10px;color:var(--mt)}
-        .trend-pnl{font-weight:800;font-family:monospace;min-width:50px;text-align:right}
-        .trend-empty{text-align:center;padding:40px;color:var(--mt);font-size:14px}
+        /* ── Trending ── */
+        .trend-section { margin-bottom: 24px }
+        .trend-section-title {
+            font-size: 11px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: .5px; color: var(--mt); margin-bottom: 10px;
+        }
+        .trend-card {
+            background: var(--s1); border-radius: var(--r1); padding: 12px;
+            margin-bottom: 6px; border: 1px solid var(--bd); display: flex;
+            align-items: center; gap: 10px; cursor: pointer; transition: all .2s;
+        }
+        .trend-card:hover { border-color: var(--bd2); box-shadow: var(--glow) }
+        .trend-ticker { font-weight: 800; color: var(--ac2); min-width: 48px }
+        .trend-body { flex: 1; min-width: 0 }
+        .trend-headline { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+        .trend-meta { font-size: 10px; color: var(--mt) }
+        .trend-pnl {
+            font-weight: 800; font-family: 'JetBrains Mono', monospace;
+            min-width: 50px; text-align: right;
+        }
+        .trend-empty { text-align: center; padding: 40px; color: var(--mt); font-size: 14px }
 
         /* ── Responsive ── */
-
-        /* Desktop: wider content area */
-        @media(min-width:1024px){
-            .chat-w,.input-w{max-width:920px}
+        @media (min-width: 1024px) { .chat-w, .input-w { max-width: 920px } }
+        @media (max-width: 768px) {
+            .nav { padding: 0 14px; height: 48px }
+            .logo { font-size: 16px }
+            .btn { padding: 5px 10px; font-size: 11px }
+            .chat-w { padding: 0 12px }
+            .msg-a .bub { padding: 16px }
+            .intro-features { grid-template-columns: 1fr; gap: 6px }
+            .intro-feat { padding: 8px 12px; display: flex; align-items: center; gap: 10px }
+            .intro-feat-icon { font-size: 18px; margin-bottom: 0; flex-shrink: 0 }
+            .tk-head { flex-wrap: wrap; gap: 8px; padding: 12px }
+            .tk-left { flex: 1; min-width: 0 }
+            .tk-name { display: block; margin-top: 2px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px }
+            .tk-sym { font-size: 14px }
+            .tk-price { font-size: 14px }
+            .metrics { overflow-x: auto; flex-wrap: nowrap; margin: 0 12px 10px }
+            .metric { min-width: 70px; padding: 6px 8px }
+            .metric-val { font-size: 12px }
+            .tk-chart canvas { height: 160px !important }
+            .tk-ctx { flex-wrap: wrap; padding: 6px 12px 8px; font-size: 10px }
+            .sc-header { flex-direction: column; align-items: flex-start; gap: 4px }
+            .chain-flow { gap: 4px }
+            .chain-pill { padding: 3px 10px; font-size: 10px }
+            .precedent-box { padding: 10px 12px }
+            .prec-event { font-size: 11px }
+            .prec-outcome { font-size: 10px; padding: 2px 6px }
+            .tk-earnings { font-size: 10px; padding: 6px 8px; margin: 0 12px 6px }
+            .tk-precedent { font-size: 10px; padding: 0 12px 8px }
+            .analysis { padding: 0 12px 10px; font-size: 12px }
+            .input-bar { padding: 8px 12px }
+            .input-w input { padding: 11px 12px; font-size: 14px }
+            .send { padding: 11px 18px; font-size: 13px }
+            .sugg-pill { padding: 7px 12px; font-size: 11px }
+            .nav-drop { left: -14px; right: -14px; min-width: auto }
+            .picks-grid { grid-template-columns: 1fr }
+            .port-stats { grid-template-columns: 1fr }
+            .chain-bar-name { min-width: 100px; font-size: 11px }
+            .view-content { padding: 14px }
+            .alloc-input-row { flex-wrap: wrap }
         }
-
-        /* Tablet and below */
-        @media(max-width:768px){
-            .nav{padding:10px 16px}
-            .logo{font-size:17px}
-            .btn{padding:5px 10px;font-size:12px}
-            .chat-w{padding:0 12px}
-            .msg-a .bub{padding:14px}
-
-            /* Feature cards: 1 column */
-            .intro-features{grid-template-columns:1fr;gap:6px}
-            .intro-feat{padding:8px 12px;display:flex;align-items:center;gap:10px}
-            .intro-feat-icon{font-size:18px;margin-bottom:0;flex-shrink:0}
-            .intro-feat div:last-child{flex:1}
-
-            /* Ticker card header: wrap on small screens */
-            .tk-head{flex-wrap:wrap;gap:8px;padding:12px}
-            .tk-left{flex:1;min-width:0}
-            .tk-name{display:block;margin-top:2px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
-            .tk-sym{font-size:14px}
-            .tk-price{font-size:14px}
-            .tk-target{font-size:10px}
-
-            /* Metrics: scroll horizontally */
-            .metrics{overflow-x:auto;flex-wrap:nowrap;margin:0 12px 10px}
-            .metric{min-width:70px;padding:6px 8px}
-            .metric-val{font-size:12px}
-            .metric-lbl{font-size:8px}
-
-            /* Charts smaller */
-            .tk-chart canvas{height:160px!important}
-
-            /* Context bar: wrap */
-            .tk-ctx{flex-wrap:wrap;padding:6px 12px 8px;font-size:10px}
-
-            /* Scorecard compact */
-            .sc-header{flex-direction:column;align-items:flex-start;gap:4px}
-            .sc-stats{gap:8px;font-size:10px}
-            .sc-row{padding:5px 8px;font-size:11px;gap:6px}
-            .sc-ticker{width:40px;font-size:12px}
-            .sc-action{font-size:8px;padding:1px 4px}
-            .sc-entry{font-size:10px}
-            .sc-pnl{min-width:40px;font-size:11px}
-
-            /* Chain pills */
-            .chain-flow{gap:4px}
-            .chain-pill{padding:3px 10px;font-size:11px}
-
-            /* Precedent boxes */
-            .precedent-box{padding:10px 12px}
-            .prec-event{font-size:11px}
-            .prec-outcome{font-size:10px;padding:2px 6px}
-
-            /* Earnings/precedent in cards */
-            .tk-earnings{font-size:10px;padding:6px 8px;margin:0 12px 6px}
-            .tk-precedent{font-size:10px;padding:0 12px 8px}
-
-            /* Analysis text */
-            .analysis{padding:0 12px 10px;font-size:12px}
-
-            /* Input bar */
-            .input-bar{padding:8px 12px}
-            .input-w input{padding:11px 12px;font-size:14px}
-            .send{padding:11px 16px;font-size:13px}
-
-            /* Suggestions */
-            .sugg-pill{padding:7px 12px;font-size:11px}
-
-            /* Pipeline */
-            .pipe-tk{font-size:10px;padding:2px 6px}
-
-            /* Nav dropdown mobile */
-            .nav-drop{left:-12px;right:-12px;min-width:auto}
-
-            /* Views mobile */
-            .picks-grid{grid-template-columns:1fr}
-            .port-stats{grid-template-columns:1fr}
-            .chain-bar-name{min-width:100px;font-size:11px}
-            .view-content{padding:14px}
-        }
-
-        /* Very small phones */
-        @media(max-width:380px){
-            .tk-left{gap:6px}
-            .tk-action{font-size:8px;padding:1px 4px}
-            .order-badge{font-size:8px;padding:1px 4px}
-            .tk-name{max-width:120px}
-            .metric{min-width:60px}
+        @media (max-width: 380px) {
+            .tk-left { gap: 6px }
+            .tk-action { font-size: 8px; padding: 1px 4px }
+            .order-badge { font-size: 8px; padding: 1px 4px }
+            .tk-name { max-width: 120px }
+            .metric { min-width: 60px }
         }
     </style>
 </head>
 <body>
 <nav class="nav">
     <div class="nav-left">
-        <button class="menu-btn" onclick="toggleMenu()" id="menuBtn">☰</button>
-        <div class="logo" style="cursor:pointer" onclick="showView('analyze')">ThetaFlow</div>
+        <button class="menu-btn" onclick="toggleMenu()" id="menuBtn">&#9776;</button>
+        <div class="logo" onclick="showView('analyze')">ThetaFlow</div>
         <div class="nav-drop" id="navDrop">
-            <div class="nav-item active" data-view="analyze" onclick="showView('analyze')"><span class="nav-item-icon">⚡</span> Analyze</div>
-            <div class="nav-item" data-view="picks" onclick="showView('picks')"><span class="nav-item-icon">🎯</span> Stock Picks</div>
-            <div class="nav-item" data-view="portfolio" onclick="showView('portfolio')"><span class="nav-item-icon">📊</span> Portfolio</div>
-            <div class="nav-item" data-view="trending" onclick="showView('trending')"><span class="nav-item-icon">🔥</span> Trending Trades</div>
+            <div class="nav-item active" data-view="analyze" onclick="showView('analyze')"><span class="nav-item-icon">&#9889;</span> Analyze</div>
+            <div class="nav-item" data-view="picks" onclick="showView('picks')"><span class="nav-item-icon">&#127919;</span> Stock Picks</div>
+            <div class="nav-item" data-view="portfolio" onclick="showView('portfolio')"><span class="nav-item-icon">&#128202;</span> Portfolio</div>
+            <div class="nav-item" data-view="trending" onclick="showView('trending')"><span class="nav-item-icon">&#128293;</span> Trending Trades</div>
             <div class="nav-sep"></div>
-            <div class="nav-item" data-view="how" onclick="showView('how')"><span class="nav-item-icon">❓</span> How It Works</div>
-            <div class="nav-item" onclick="location.href=API+'/export'"><span class="nav-item-icon">📤</span> Export CSV</div>
+            <div class="nav-item" data-view="how" onclick="showView('how')"><span class="nav-item-icon">&#10067;</span> How It Works</div>
+            <div class="nav-item" onclick="location.href=API+'/export'"><span class="nav-item-icon">&#128228;</span> Export CSV</div>
         </div>
     </div>
     <div class="nav-r">
@@ -352,23 +605,23 @@
     <div class="msg msg-a">
         <div class="lbl">ThetaFlow</div>
         <div class="bub">
-            <div style="font-size:18px;font-weight:800;margin-bottom:4px;">Find the trades everyone else misses ⚡</div>
-            <p style="color:var(--mt);margin-bottom:14px;font-size:13px">Enter any headline. I'll skip the obvious reaction and find the second and third-order plays — the hidden winners and losers the market hasn't priced in yet.</p>
+            <div style="font-size:20px;font-weight:900;margin-bottom:6px;letter-spacing:-0.3px">Find the trades everyone else misses</div>
+            <p style="color:var(--mt);margin-bottom:16px;font-size:13px;line-height:1.6">Enter any headline. I'll skip the obvious reaction and find second and third-order plays &mdash; the hidden winners and losers the market hasn't priced in yet.</p>
             <div class="intro-features">
                 <div class="intro-feat">
-                    <div class="intro-feat-icon">🔍</div>
-                    <div class="intro-feat-title">Hidden Connections</div>
-                    <div class="intro-feat-desc">Second and third-order supply chain effects most investors miss</div>
+                    <div class="intro-feat-icon">&#128269;</div>
+                    <div><div class="intro-feat-title">Hidden Connections</div>
+                    <div class="intro-feat-desc">2nd and 3rd-order supply chain effects most investors miss</div></div>
                 </div>
                 <div class="intro-feat">
-                    <div class="intro-feat-icon">📊</div>
-                    <div class="intro-feat-title">Price Projections</div>
-                    <div class="intro-feat-desc">30-day volatility cone with conviction-weighted targets</div>
+                    <div class="intro-feat-icon">&#128200;</div>
+                    <div><div class="intro-feat-title">Price Projections</div>
+                    <div class="intro-feat-desc">30-day volatility cone with conviction-weighted targets</div></div>
                 </div>
                 <div class="intro-feat">
-                    <div class="intro-feat-icon">🎯</div>
-                    <div class="intro-feat-title">Actionable Signals</div>
-                    <div class="intro-feat-desc">BUY / SHORT / WATCH with entry logic and risk/reward</div>
+                    <div class="intro-feat-icon">&#127919;</div>
+                    <div><div class="intro-feat-title">Actionable Signals</div>
+                    <div class="intro-feat-desc">BUY / SHORT / WATCH with entry logic and risk/reward</div></div>
                 </div>
             </div>
             <div class="scorecard" id="scorecard" style="display:none"></div>
@@ -379,19 +632,18 @@
     <div id="msgs"></div>
 </div>
 </div>
-
 <div class="input-bar">
     <div class="input-w">
         <input id="inp" placeholder="e.g. NVIDIA beats earnings by 20%, TSMC builds US fabs, Fed cuts rates..." onkeydown="if(event.key==='Enter'){event.preventDefault();send()}">
-        <button class="send" id="sendBtn" onclick="send()">Analyze →</button>
+        <button class="send" id="sendBtn" onclick="send()">Analyze &#8594;</button>
     </div>
 </div>
-</div><!-- /view-analyze -->
+</div>
 
 <!-- View: Stock Picks -->
 <div class="view" id="view-picks">
 <div class="view-content">
-    <div class="view-title">Stock Picks 🎯</div>
+    <div class="view-title">Stock Picks</div>
     <div class="view-sub">AI-scored picks across all value chains. Score factors: catalyst exposure, valuation, momentum, risk/reward.</div>
     <div class="pick-filters" id="pickFilters"></div>
     <div class="picks-grid" id="picksGrid"><div class="trend-empty">Loading stock picks...</div></div>
@@ -401,12 +653,12 @@
 <!-- View: Portfolio -->
 <div class="view" id="view-portfolio">
 <div class="view-content">
-    <div class="view-title">Portfolio 📊</div>
+    <div class="view-title">Portfolio</div>
     <div class="view-sub">Allocation across value chains and top holdings by conviction.</div>
     <div class="port-stats" id="portStats"></div>
-    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:10px">Chain Allocation</div>
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:10px">Chain Allocation</div>
     <div class="chain-bars" id="chainBars"></div>
-    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:10px">Top Holdings</div>
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:10px">Top Holdings</div>
     <div id="topHoldings"></div>
 </div>
 </div>
@@ -414,8 +666,8 @@
 <!-- View: Trending Trades -->
 <div class="view" id="view-trending">
 <div class="view-content">
-    <div class="view-title">Trending Trades 🔥</div>
-    <div class="view-sub">Recent calls with live P&L and active market signals.</div>
+    <div class="view-title">Trending Trades</div>
+    <div class="view-sub">Recent calls with live P&amp;L and active market signals.</div>
     <div id="trendingContent"><div class="trend-empty">Loading trending trades...</div></div>
 </div>
 </div>
@@ -423,219 +675,209 @@
 <!-- View: How It Works -->
 <div class="view" id="view-how">
 <div class="view-content" style="max-width:700px">
-    <div class="view-title">How ThetaFlow Works ❓</div>
+    <div class="view-title">How ThetaFlow Works</div>
     <div class="view-sub">A step-by-step breakdown of what happens when you enter a headline.</div>
 
-    <div style="display:flex;flex-direction:column;gap:16px;">
-        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--ac)">
-            <div style="font-size:24px;font-weight:900;color:var(--ac);margin-bottom:4px">1</div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="background:var(--s1);border-radius:var(--r2);padding:20px;border:1px solid var(--bd);border-left:3px solid var(--ac)">
+            <div style="font-size:28px;font-weight:900;color:var(--ac2);margin-bottom:4px;font-family:'JetBrains Mono',monospace">01</div>
             <div style="font-weight:700;margin-bottom:6px">You Enter a Headline</div>
             <div style="font-size:13px;color:var(--mt);line-height:1.6">Paste any news headline, earnings report, macro announcement, or "what if" scenario. ThetaFlow works with anything from "NVIDIA beats earnings by 20%" to "China bans rare earth exports."</div>
         </div>
-
-        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--pu)">
-            <div style="font-size:24px;font-weight:900;color:var(--pu);margin-bottom:4px">2</div>
-            <div style="font-weight:700;margin-bottom:6px">AI Identifies the Investment Themes</div>
-            <div style="font-size:13px;color:var(--mt);line-height:1.6">Claude AI reads the headline and identifies which investment themes (value chains) are affected. It then maps out the full supply chain — from upstream suppliers to downstream applications — finding companies at every layer.</div>
+        <div style="background:var(--s1);border-radius:var(--r2);padding:20px;border:1px solid var(--bd);border-left:3px solid var(--pu)">
+            <div style="font-size:28px;font-weight:900;color:var(--pu);margin-bottom:4px;font-family:'JetBrains Mono',monospace">02</div>
+            <div style="font-weight:700;margin-bottom:6px">AI Identifies Investment Themes</div>
+            <div style="font-size:13px;color:var(--mt);line-height:1.6">Claude AI reads the headline and identifies which investment themes (value chains) are affected. It maps the full supply chain &mdash; from upstream suppliers to downstream applications &mdash; finding companies at every layer.</div>
         </div>
-
-        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--cy)">
-            <div style="font-size:24px;font-weight:900;color:var(--cy);margin-bottom:4px">3</div>
-            <div style="font-weight:700;margin-bottom:6px">It Skips the Obvious, Finds the Hidden Plays</div>
-            <div style="font-size:13px;color:var(--mt);line-height:1.6">The "obvious play" is dismissed (everyone sees that one). Instead, ThetaFlow identifies <strong>2nd and 3rd-order effects</strong> — the companies that benefit or suffer through indirect supply chain connections that most investors miss.</div>
+        <div style="background:var(--s1);border-radius:var(--r2);padding:20px;border:1px solid var(--bd);border-left:3px solid var(--cy)">
+            <div style="font-size:28px;font-weight:900;color:var(--cy);margin-bottom:4px;font-family:'JetBrains Mono',monospace">03</div>
+            <div style="font-weight:700;margin-bottom:6px">Skips the Obvious, Finds Hidden Plays</div>
+            <div style="font-size:13px;color:var(--mt);line-height:1.6">The "obvious play" is dismissed (everyone sees that one). Instead, ThetaFlow identifies <strong>2nd and 3rd-order effects</strong> &mdash; companies that benefit or suffer through indirect supply chain connections most investors miss.</div>
         </div>
-
-        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--gn)">
-            <div style="font-size:24px;font-weight:900;color:var(--gn);margin-bottom:4px">4</div>
+        <div style="background:var(--s1);border-radius:var(--r2);padding:20px;border:1px solid var(--bd);border-left:3px solid var(--gn)">
+            <div style="font-size:28px;font-weight:900;color:var(--gn);margin-bottom:4px;font-family:'JetBrains Mono',monospace">04</div>
             <div style="font-weight:700;margin-bottom:6px">Real Financial Data + Historical Precedent</div>
-            <div style="font-size:13px;color:var(--mt);line-height:1.6">For each recommended ticker, ThetaFlow pulls <strong>live prices from Yahoo Finance</strong>, computes 30-day projection cones using Geometric Brownian Motion, and references <strong>historical precedents</strong> — what happened to these stocks the last time a similar event occurred.</div>
+            <div style="font-size:13px;color:var(--mt);line-height:1.6">For each ticker, ThetaFlow pulls <strong>live prices from Yahoo Finance</strong>, computes 30-day projection cones using Geometric Brownian Motion, and references <strong>historical precedents</strong> &mdash; what happened the last time a similar event occurred.</div>
         </div>
-
-        <div style="background:var(--s2);border-radius:12px;padding:20px;border-left:3px solid var(--yl)">
-            <div style="font-size:24px;font-weight:900;color:var(--yl);margin-bottom:4px">5</div>
+        <div style="background:var(--s1);border-radius:var(--r2);padding:20px;border:1px solid var(--bd);border-left:3px solid var(--yl)">
+            <div style="font-size:28px;font-weight:900;color:var(--yl);margin-bottom:4px;font-family:'JetBrains Mono',monospace">05</div>
             <div style="font-weight:700;margin-bottom:6px">Actionable Output with Risk Assessment</div>
-            <div style="font-size:13px;color:var(--mt);line-height:1.6">Each analysis includes: <strong>BUY/SHORT/WATCH</strong> signals, price targets with risk/reward ratios, quantified earnings impact, compounding catalysts, and a <strong>contrarian view</strong> — what could go wrong. Every recommendation is tracked in the Scorecard for accountability.</div>
+            <div style="font-size:13px;color:var(--mt);line-height:1.6">Each analysis includes: <strong>BUY/SHORT/WATCH</strong> signals, price targets with risk/reward ratios, quantified earnings impact, compounding catalysts, and a <strong>contrarian view</strong> &mdash; what could go wrong.</div>
         </div>
     </div>
 
-    <div style="background:var(--s2);border-radius:12px;padding:20px;margin-top:20px;border:1px solid var(--bd)">
-        <div style="font-weight:700;margin-bottom:8px">Data Sources</div>
+    <div style="background:var(--s1);border-radius:var(--r2);padding:20px;margin-top:20px;border:1px solid var(--bd)">
+        <div style="font-weight:700;margin-bottom:10px">Data Sources</div>
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:12px;color:var(--mt)">
-            <div>📰 <strong>WSJ RSS</strong> — Live headlines from Technology, Markets, Business, Economy</div>
-            <div>📊 <strong>Yahoo Finance</strong> — Prices, 52-week range, volume for all tickers</div>
-            <div>🏛️ <strong>SEC EDGAR</strong> — 8-K material event filings</div>
-            <div>📡 <strong>NewsAPI</strong> — Cross-source news aggregation</div>
-            <div>🤖 <strong>Claude AI</strong> — Investment analysis with quantified reasoning</div>
-            <div>📈 <strong>GBM Projection</strong> — Geometric Brownian Motion volatility cones</div>
+            <div>&#128240; <strong>WSJ RSS</strong> &mdash; Live headlines</div>
+            <div>&#128200; <strong>Yahoo Finance</strong> &mdash; Prices &amp; metrics</div>
+            <div>&#127963;&#65039; <strong>SEC EDGAR</strong> &mdash; 8-K filings</div>
+            <div>&#128225; <strong>NewsAPI</strong> &mdash; News aggregation</div>
+            <div>&#129302; <strong>Claude AI</strong> &mdash; Investment analysis</div>
+            <div>&#128200; <strong>GBM Projection</strong> &mdash; Volatility cones</div>
         </div>
     </div>
 
-    <div style="margin-top:20px;text-align:center;">
-        <button class="send" style="padding:14px 32px" onclick="showView('analyze')">Start Analyzing →</button>
+    <div style="margin-top:20px;text-align:center">
+        <button class="send" style="padding:14px 32px" onclick="showView('analyze')">Start Analyzing &#8594;</button>
     </div>
 </div>
 </div>
 
 <script>
-const API=location.origin+'/api';
+const API = location.origin + '/api';
 
 // ── Nav Menu & View Switching ──
-function toggleMenu(){document.getElementById('navDrop').classList.toggle('open')}
-document.addEventListener('click',e=>{if(!e.target.closest('.nav-left'))document.getElementById('navDrop').classList.remove('open')});
+function toggleMenu() { document.getElementById('navDrop').classList.toggle('open') }
+document.addEventListener('click', e => { if (!e.target.closest('.nav-left')) document.getElementById('navDrop').classList.remove('open') });
 
-function showView(id){
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    document.getElementById('view-'+id).classList.add('active');
-    document.querySelectorAll('.nav-item[data-view]').forEach(n=>{n.classList.toggle('active',n.dataset.view===id)});
+function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + id).classList.add('active');
+    document.querySelectorAll('.nav-item[data-view]').forEach(n => { n.classList.toggle('active', n.dataset.view === id) });
     document.getElementById('navDrop').classList.remove('open');
-    if(id==='picks')loadStockPicks();
-    if(id==='portfolio')loadPortfolio();
-    if(id==='trending')loadTrending();
+    if (id === 'picks') loadStockPicks();
+    if (id === 'portfolio') loadPortfolio();
+    if (id === 'trending') loadTrending();
 }
 
 // ── Stock Picks View ──
-let picksData=[];
-async function loadStockPicks(){
-    try{
-        document.getElementById('picksGrid').innerHTML='<div class="trend-empty">Scoring stocks with AI... this takes ~15 seconds</div>';
-        const r=await fetch(`${API}/scored-picks`);
-        const d=await r.json();
-        if(!d.success)return;
-        picksData=d.picks||[];
-        const chains=[...new Set(picksData.map(t=>t.chain_name))];
-        document.getElementById('pickFilters').innerHTML=
-            `<div class="pick-filter active" onclick="filterPicks('all')">All (${picksData.length})</div>`+
-            `<div class="pick-filter" onclick="filterPicks('A')">A Grade</div>`+
-            `<div class="pick-filter" onclick="filterPicks('B')">B Grade</div>`+
-            chains.map(c=>`<div class="pick-filter" onclick="filterPicks('chain','${c}')">${c}</div>`).join('');
+let picksData = [];
+async function loadStockPicks() {
+    try {
+        document.getElementById('picksGrid').innerHTML = '<div class="trend-empty">Scoring stocks with AI... this takes ~15 seconds</div>';
+        const r = await fetch(`${API}/scored-picks`);
+        const d = await r.json();
+        if (!d.success) return;
+        picksData = d.picks || [];
+        const chains = [...new Set(picksData.map(t => t.chain_name))];
+        document.getElementById('pickFilters').innerHTML =
+            `<div class="pick-filter active" onclick="filterPicks('all')">All (${picksData.length})</div>` +
+            `<div class="pick-filter" onclick="filterPicks('A')">A Grade</div>` +
+            `<div class="pick-filter" onclick="filterPicks('B')">B Grade</div>` +
+            chains.map(c => `<div class="pick-filter" onclick="filterPicks('chain','${c}')">${c}</div>`).join('');
         renderPicks(picksData);
-    }catch(e){document.getElementById('picksGrid').innerHTML='<div class="trend-empty">Failed to load picks</div>'}
+    } catch (e) { document.getElementById('picksGrid').innerHTML = '<div class="trend-empty">Failed to load picks</div>' }
 }
-function filterPicks(type,val){
-    document.querySelectorAll('.pick-filter').forEach(f=>f.classList.remove('active'));
+function filterPicks(type, val) {
+    document.querySelectorAll('.pick-filter').forEach(f => f.classList.remove('active'));
     event.target.classList.add('active');
-    let filtered=picksData;
-    if(type==='A')filtered=picksData.filter(t=>t.grade==='A');
-    if(type==='B')filtered=picksData.filter(t=>t.grade==='B');
-    if(type==='chain')filtered=picksData.filter(t=>t.chain_name===val);
+    let filtered = picksData;
+    if (type === 'A') filtered = picksData.filter(t => t.grade === 'A');
+    if (type === 'B') filtered = picksData.filter(t => t.grade === 'B');
+    if (type === 'chain') filtered = picksData.filter(t => t.chain_name === val);
     renderPicks(filtered);
 }
-function renderPicks(tickers){
-    const g=document.getElementById('picksGrid');
-    if(!tickers.length){g.innerHTML='<div class="trend-empty">No picks match this filter</div>';return}
-    g.innerHTML=tickers.map(t=>{
-        const action=t.action||'WATCH';
-        const actCls=action==='BUY'?'buy':action==='SHORT'?'short':action==='WATCH'?'watch':'avoid';
-        const score=t.score||50;
-        const grade=t.grade||'C';
-        const gradeClr=grade==='A'?'var(--gn)':grade==='B'?'var(--cy)':grade==='C'?'var(--yl)':'var(--rd)';
-        const scoreBar=Math.min(score,100);
+function renderPicks(tickers) {
+    const g = document.getElementById('picksGrid');
+    if (!tickers.length) { g.innerHTML = '<div class="trend-empty">No picks match this filter</div>'; return }
+    g.innerHTML = tickers.map(t => {
+        const action = t.action || 'WATCH';
+        const actCls = action === 'BUY' ? 'buy' : action === 'SHORT' ? 'short' : action === 'WATCH' ? 'watch' : 'avoid';
+        const score = t.score || 50;
+        const grade = t.grade || 'C';
+        const gradeClr = grade === 'A' ? 'var(--gn)' : grade === 'B' ? 'var(--cy)' : grade === 'C' ? 'var(--yl)' : 'var(--rd)';
         return `<div class="pick-card" onclick="showView('analyze');pick('${t.ticker} stock analysis')">
             <div class="pick-top">
                 <div style="display:flex;align-items:center;gap:8px">
                     <span class="pick-ticker">${t.ticker}</span>
                     <span class="tk-action ${actCls}" style="font-size:10px">${action}</span>
-                    <span style="font-size:12px;font-weight:800;color:${gradeClr}">${grade}</span>
+                    <span style="font-size:13px;font-weight:900;color:${gradeClr}">${grade}</span>
                 </div>
                 <div style="text-align:right">
-                    <span class="pick-price">${t.current_price?'$'+t.current_price.toFixed(0):''}</span>
-                    <div style="font-size:20px;font-weight:900;color:${gradeClr}">${score}</div>
+                    <span class="pick-price">${t.current_price ? '$' + t.current_price.toFixed(0) : ''}</span>
+                    <div style="font-size:22px;font-weight:900;color:${gradeClr};font-family:'JetBrains Mono',monospace">${score}</div>
                 </div>
             </div>
-            <div class="pick-company">${t.company||''}</div>
-            <div style="height:4px;background:var(--bg);border-radius:2px;margin:6px 0;overflow:hidden"><div style="height:100%;width:${scoreBar}%;background:${gradeClr};border-radius:2px"></div></div>
-            ${t.rationale?`<div style="font-size:11px;color:var(--mt);line-height:1.4">${t.rationale}</div>`:''}
+            <div class="pick-company">${t.company || ''}</div>
+            <div style="height:3px;background:var(--bg2);border-radius:2px;margin:6px 0;overflow:hidden"><div style="height:100%;width:${Math.min(score, 100)}%;background:${gradeClr};border-radius:2px"></div></div>
+            ${t.rationale ? `<div style="font-size:11px;color:var(--mt);line-height:1.4">${t.rationale}</div>` : ''}
             <div class="pick-meta" style="margin-top:6px">
-                <span class="pick-chain">${t.chain_name||''}</span>
-                <span style="font-size:10px;color:var(--mt)">${t.layer||''}</span>
+                <span class="pick-chain">${t.chain_name || ''}</span>
+                <span style="font-size:10px;color:var(--mt)">${t.layer || ''}</span>
             </div>
         </div>`;
     }).join('');
 }
 
 // ── Portfolio View ──
-async function loadPortfolio(){
-    try{
-        const r=await fetch(`${API}/portfolio`);
-        const d=await r.json();
-        if(!d.success)return;
-        const tickers=d.tickers||[];
-        const byChain=d.by_chain||{};
-        const totalTickers=d.total_tickers||tickers.length;
-        const chainCount=d.chains_covered||Object.keys(byChain).length;
-        const avgConv=tickers.length?tickers.reduce((s,t)=>s+t.conviction,0)/tickers.length:0;
+async function loadPortfolio() {
+    try {
+        const r = await fetch(`${API}/portfolio`);
+        const d = await r.json();
+        if (!d.success) return;
+        const tickers = d.tickers || [];
+        const byChain = d.by_chain || {};
+        const totalTickers = d.total_tickers || tickers.length;
+        const chainCount = d.chains_covered || Object.keys(byChain).length;
+        const avgConv = tickers.length ? tickers.reduce((s, t) => s + t.conviction, 0) / tickers.length : 0;
 
-        // Stats
-        document.getElementById('portStats').innerHTML=`
+        document.getElementById('portStats').innerHTML = `
             <div class="port-stat"><div class="port-stat-val">${totalTickers}</div><div class="port-stat-lbl">Total Tickers</div></div>
             <div class="port-stat"><div class="port-stat-val">${chainCount}</div><div class="port-stat-lbl">Value Chains</div></div>
-            <div class="port-stat"><div class="port-stat-val">${(avgConv*100).toFixed(0)}%</div><div class="port-stat-lbl">Avg Conviction</div></div>`;
+            <div class="port-stat"><div class="port-stat-val">${(avgConv * 100).toFixed(0)}%</div><div class="port-stat-lbl">Avg Conviction</div></div>`;
 
-        // Chain bars
-        const maxCount=Math.max(...Object.values(byChain).map(c=>c.ticker_count||0),1);
-        document.getElementById('chainBars').innerHTML=Object.entries(byChain).map(([id,c])=>{
-            const pct=((c.ticker_count||0)/maxCount*100);
+        const maxCount = Math.max(...Object.values(byChain).map(c => c.ticker_count || 0), 1);
+        document.getElementById('chainBars').innerHTML = Object.entries(byChain).map(([id, c]) => {
+            const pct = ((c.ticker_count || 0) / maxCount * 100);
             return `<div class="chain-bar-row">
-                <span class="chain-bar-name" style="color:${c.color||'var(--tx)'}">${c.name}</span>
-                <div class="chain-bar-track"><div class="chain-bar-fill" style="width:${pct}%;background:${c.color||'var(--ac)'}">${c.ticker_count}</div></div>
+                <span class="chain-bar-name" style="color:${c.color || 'var(--tx)'}">${c.name}</span>
+                <div class="chain-bar-track"><div class="chain-bar-fill" style="width:${pct}%;background:${c.color || 'var(--ac)'}">${c.ticker_count}</div></div>
             </div>`;
         }).join('');
 
-        // Top holdings
-        document.getElementById('topHoldings').innerHTML=tickers.slice(0,10).map(t=>{
-            const dir=t.direction==='bullish';
+        document.getElementById('topHoldings').innerHTML = tickers.slice(0, 10).map(t => {
+            const dir = t.direction === 'bullish';
             return `<div class="trend-card" onclick="showView('analyze');pick('${t.ticker}')">
                 <span class="trend-ticker">${t.ticker}</span>
                 <div class="trend-body">
-                    <div class="trend-headline">${t.company||''}</div>
-                    <div class="trend-meta">${t.chain_name} · ${t.layer} · ${(t.conviction*100).toFixed(0)}% conviction</div>
+                    <div class="trend-headline">${t.company || ''}</div>
+                    <div class="trend-meta">${t.chain_name} &middot; ${t.layer} &middot; ${(t.conviction * 100).toFixed(0)}% conviction</div>
                 </div>
-                <span class="trend-pnl" style="color:${dir?'var(--gn)':'var(--rd)'}">${t.current_price?'$'+t.current_price.toFixed(0):''}</span>
+                <span class="trend-pnl" style="color:${dir ? 'var(--gn)' : 'var(--rd)'}">${t.current_price ? '$' + t.current_price.toFixed(0) : ''}</span>
             </div>`;
         }).join('');
-    }catch(e){}
+    } catch (e) {}
 }
 
 // ── Trending Trades View ──
-async function loadTrending(){
-    try{
-        const [scRes,sigRes]=await Promise.all([
+async function loadTrending() {
+    try {
+        const [scRes, sigRes] = await Promise.all([
             fetch(`${API}/scorecard?days=14&limit=10`),
             fetch(`${API}/signals?hours=72&limit=5`)
         ]);
-        const sc=await scRes.json();
-        const sig=await sigRes.json();
-        let h='';
+        const sc = await scRes.json();
+        const sig = await sigRes.json();
+        let h = '';
 
-        // Recent calls with P&L
-        if(sc.success&&sc.recommendations?.length){
-            const s=sc.stats;
-            h+=`<div class="trend-section">
-                <div class="trend-section-title">Recent Calls — ${s.win_rate}% win rate · ${s.avg_pnl>=0?'+':''}${s.avg_pnl}% avg</div>`;
-            sc.recommendations.forEach(r=>{
-                const pnlClr=r.pnl_pct>=0?'var(--gn)':'var(--rd)';
-                const actCls=r.action==='SHORT'||r.action==='SELL'?'short':'buy';
-                h+=`<div class="trend-card" onclick="showView('analyze');pick('${(r.headline||'').replace(/'/g,"\\'").substring(0,70)}')">
+        if (sc.success && sc.recommendations?.length) {
+            const s = sc.stats;
+            h += `<div class="trend-section">
+                <div class="trend-section-title">Recent Calls &mdash; ${s.win_rate}% win rate &middot; ${s.avg_pnl >= 0 ? '+' : ''}${s.avg_pnl}% avg</div>`;
+            sc.recommendations.forEach(r => {
+                const pnlClr = r.pnl_pct >= 0 ? 'var(--gn)' : 'var(--rd)';
+                const actCls = r.action === 'SHORT' || r.action === 'SELL' ? 'short' : 'buy';
+                h += `<div class="trend-card" onclick="showView('analyze');pick('${(r.headline || '').replace(/'/g, "\\'").substring(0, 70)}')">
                     <span class="trend-ticker">${r.ticker}</span>
                     <span class="sc-action ${actCls}" style="margin-right:4px">${r.action}</span>
                     <div class="trend-body">
-                        <div class="trend-headline">$${r.entry_price.toFixed(0)} → $${r.current_price.toFixed(0)}</div>
-                        <div class="trend-meta">${_ago(r.created_at)} · ${r.chain_name||''}</div>
+                        <div class="trend-headline">$${r.entry_price.toFixed(0)} &rarr; $${r.current_price.toFixed(0)}</div>
+                        <div class="trend-meta">${_ago(r.created_at)} &middot; ${r.chain_name || ''}</div>
                     </div>
-                    <span class="trend-pnl" style="color:${pnlClr}">${r.pnl_pct>=0?'+':''}${r.pnl_pct}%</span>
-                    <span style="font-size:10px">${r.correct?'✅':'❌'}</span>
+                    <span class="trend-pnl" style="color:${pnlClr}">${r.pnl_pct >= 0 ? '+' : ''}${r.pnl_pct}%</span>
+                    <span style="font-size:10px">${r.correct ? '\u2705' : '\u274C'}</span>
                 </div>`;
             });
-            h+='</div>';
+            h += '</div>';
         }
 
-        // Active signals
-        if(sig.success&&sig.signals?.length){
-            h+=`<div class="trend-section"><div class="trend-section-title">Active Catalysts (${sig.count})</div>`;
-            sig.signals.forEach(s=>{
-                const src=s.source==='wsj'?'WSJ':s.source==='newsapi'?'News':'SEC';
-                const picks=(s.top_picks||[]).slice(0,2).map(t=>`<strong style="color:var(--ac)">${t.ticker}</strong>`).join(' ');
-                h+=`<div class="trend-card" onclick="showView('analyze');pick('${(s.title||'').replace(/'/g,"\\'").substring(0,70)}')">
+        if (sig.success && sig.signals?.length) {
+            h += `<div class="trend-section"><div class="trend-section-title">Active Catalysts (${sig.count})</div>`;
+            sig.signals.forEach(s => {
+                const src = s.source === 'wsj' ? 'WSJ' : s.source === 'newsapi' ? 'News' : 'SEC';
+                const picks = (s.top_picks || []).slice(0, 2).map(t => `<strong style="color:var(--ac2)">${t.ticker}</strong>`).join(' ');
+                h += `<div class="trend-card" onclick="showView('analyze');pick('${(s.title || '').replace(/'/g, "\\'").substring(0, 70)}')">
                     <span style="font-size:10px;color:var(--mt);min-width:30px">${src}</span>
                     <div class="trend-body">
                         <div class="trend-headline">${s.title}</div>
@@ -644,488 +886,529 @@ async function loadTrending(){
                     <span style="font-size:11px">${picks}</span>
                 </div>`;
             });
-            h+='</div>';
+            h += '</div>';
         }
 
-        if(!h)h='<div class="trend-empty">No trending trades yet. Run some analyses first!</div>';
-        document.getElementById('trendingContent').innerHTML=h;
-    }catch(e){document.getElementById('trendingContent').innerHTML='<div class="trend-empty">Failed to load trending data</div>'}
+        if (!h) h = '<div class="trend-empty">No trending trades yet. Run some analyses first!</div>';
+        document.getElementById('trendingContent').innerHTML = h;
+    } catch (e) { document.getElementById('trendingContent').innerHTML = '<div class="trend-empty">Failed to load trending data</div>' }
 }
 
-const CATS=[
-    {i:'🖥️',cat:'Technology',t:'What if NVIDIA beats earnings by 20%?'},
-    {i:'📈',cat:'Markets',t:'Fed signals rate cut at next FOMC meeting'},
-    {i:'⚡',cat:'Energy',t:'New nuclear power plant approved for AI data centers'},
-    {i:'💊',cat:'Healthcare',t:'Eli Lilly GLP-1 drug gets FDA fast-track approval'},
+// ── Suggestions ──
+const CATS = [
+    { cat: 'Technology', t: 'What if NVIDIA beats earnings by 20%?' },
+    { cat: 'Markets', t: 'Fed signals rate cut at next FOMC meeting' },
+    { cat: 'Energy', t: 'New nuclear power plant approved for AI data centers' },
+    { cat: 'Healthcare', t: 'Eli Lilly GLP-1 drug gets FDA fast-track approval' },
 ];
+document.getElementById('sugg').innerHTML = CATS.map(s =>
+    `<div class="sugg-pill" onclick="pick('${s.t.replace(/'/g, "\\'")}')" style="border-left:3px solid var(--bd)"><span style="font-size:9px;font-weight:700;color:var(--mt);margin-right:4px">${s.cat}</span> ${s.t}</div>`
+).join('');
 
-// Show categorized static suggestions first
-document.getElementById('sugg').innerHTML=CATS.map(s=>`<div class="sugg-pill" onclick="pick('${s.t.replace(/'/g,"\\'")}')" style="border-left:3px solid var(--bd)"><span style="font-size:9px;font-weight:700;color:var(--mt);margin-right:4px">${s.cat}</span> ${s.i} ${s.t}</div>`).join('');
-
-// Replace with live WSJ/news headlines — one per category
-(async()=>{
-    try{
-        const r=await fetch(`${API}/top-headlines`);
-        const d=await r.json();
-        if(d.success&&d.headlines?.length>=2){
-            const el=document.getElementById('sugg');
-            const lbl=document.getElementById('sugg-label');
-            lbl.innerHTML='Live headlines <span style="color:var(--cy)">●</span>';
-            el.innerHTML=d.headlines.map(h=>{
-                const title=h.title.length>60?h.title.substring(0,57)+'...':h.title;
-                return `<div class="sugg-pill" onclick="pick('${title.replace(/'/g,"\\'")}')" style="border-left:3px solid ${h.color||'var(--bd)'}"><span style="font-size:9px;font-weight:700;color:var(--mt);margin-right:4px">${h.category}</span> ${title}</div>`;
+// Replace with live WSJ headlines
+(async () => {
+    try {
+        const r = await fetch(`${API}/top-headlines`);
+        const d = await r.json();
+        if (d.success && d.headlines?.length >= 2) {
+            const el = document.getElementById('sugg');
+            const lbl = document.getElementById('sugg-label');
+            lbl.innerHTML = 'Live headlines <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gn);margin-left:4px;animation:pulse 1.5s infinite"></span>';
+            el.innerHTML = d.headlines.map(h => {
+                const title = h.title.length > 60 ? h.title.substring(0, 57) + '...' : h.title;
+                return `<div class="sugg-pill" onclick="pick('${title.replace(/'/g, "\\'")}')" style="border-left:3px solid ${h.color || 'var(--bd)'}"><span style="font-size:9px;font-weight:700;color:var(--mt);margin-right:4px">${h.category}</span> ${title}</div>`;
             }).join('');
         }
-    }catch(e){console.debug('top-headlines not available, using static')}
+    } catch (e) { console.debug('top-headlines not available, using static') }
 })();
 
-// Load scorecard of past calls
-(async()=>{
-    try{
-        const r=await fetch(`${API}/scorecard?days=14&limit=5`);
-        const d=await r.json();
-        if(!d.success||!d.recommendations?.length)return;
-        const el=document.getElementById('scorecard');
-        const s=d.stats;
-        let h=`<div class="sc-header">
-            <span class="sc-title">Recent Calls — Track Record</span>
+// Load scorecard
+(async () => {
+    try {
+        const r = await fetch(`${API}/scorecard?days=14&limit=5`);
+        const d = await r.json();
+        if (!d.success || !d.recommendations?.length) return;
+        const el = document.getElementById('scorecard');
+        const s = d.stats;
+        let h = `<div class="sc-header">
+            <span class="sc-title">Recent Calls &mdash; Track Record</span>
             <div class="sc-stats">
-                <span class="sc-stat"><strong style="color:${s.win_rate>=50?'var(--gn)':'var(--rd)'}">${s.win_rate}%</strong> win rate</span>
-                <span class="sc-stat"><strong style="color:${s.avg_pnl>=0?'var(--gn)':'var(--rd)'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl}%</strong> avg return</span>
+                <span class="sc-stat"><strong style="color:${s.win_rate >= 50 ? 'var(--gn)' : 'var(--rd)'}">${s.win_rate}%</strong> win rate</span>
+                <span class="sc-stat"><strong style="color:${s.avg_pnl >= 0 ? 'var(--gn)' : 'var(--rd)'}">${s.avg_pnl >= 0 ? '+' : ''}${s.avg_pnl}%</strong> avg return</span>
                 <span class="sc-stat">${s.total} calls</span>
             </div>
         </div><div class="sc-list">`;
-        d.recommendations.forEach(r=>{
-            const actCls=r.action==='SHORT'||r.action==='SELL'?'short':'buy';
-            const pnlClr=r.pnl_pct>=0?'var(--gn)':'var(--rd)';
-            const check=r.correct?'✅':'❌';
-            const tAgo=_ago(r.created_at);
-            const pnlWidth=Math.min(Math.abs(r.pnl_pct)*10,100);
-            const headline=(r.headline||'').substring(0,50);
-            h+=`<div class="sc-row" onclick="pick('${(r.headline||'').replace(/'/g,"\\'").substring(0,70)}')">
+        d.recommendations.forEach(r => {
+            const actCls = r.action === 'SHORT' || r.action === 'SELL' ? 'short' : 'buy';
+            const pnlClr = r.pnl_pct >= 0 ? 'var(--gn)' : 'var(--rd)';
+            const tAgo = _ago(r.created_at);
+            const pnlWidth = Math.min(Math.abs(r.pnl_pct) * 10, 100);
+            h += `<div class="sc-row" onclick="pick('${(r.headline || '').replace(/'/g, "\\'").substring(0, 70)}')">
                 <span class="sc-ticker">${r.ticker}</span>
                 <span class="sc-action ${actCls}">${r.action}</span>
                 <div style="flex:1;min-width:0">
                     <div style="display:flex;align-items:center;gap:6px">
-                        <span class="sc-entry">$${r.entry_price.toFixed(0)} → $${r.current_price.toFixed(0)}</span>
+                        <span class="sc-entry">$${r.entry_price.toFixed(0)} &rarr; $${r.current_price.toFixed(0)}</span>
                         <span style="font-size:10px;color:var(--mt)">${tAgo}</span>
                     </div>
                     <div class="sc-bar" style="width:${pnlWidth}%;background:${pnlClr}"></div>
                 </div>
-                <span class="sc-pnl" style="color:${pnlClr}">${r.pnl_pct>=0?'+':''}${r.pnl_pct}%</span>
-                <span class="sc-check">${check}</span>
+                <span class="sc-pnl" style="color:${pnlClr}">${r.pnl_pct >= 0 ? '+' : ''}${r.pnl_pct}%</span>
+                <span style="font-size:10px">${r.correct ? '\u2705' : '\u274C'}</span>
             </div>`;
         });
-        h+='</div>';
-        el.innerHTML=h;
-        el.style.display='block';
-    }catch(e){}
+        h += '</div>';
+        el.innerHTML = h;
+        el.style.display = 'block';
+    } catch (e) {}
 })();
-function _ago(ts){if(!ts)return'';const d=(Date.now()-new Date(ts).getTime())/1000;if(d<3600)return`${Math.floor(d/60)}m ago`;if(d<86400)return`${Math.floor(d/3600)}h ago`;return`${Math.floor(d/86400)}d ago`}
 
-function pick(t){document.getElementById('inp').value=t;send()}
-function scrollEnd(){const c=document.getElementById('chat');setTimeout(()=>c.scrollTop=c.scrollHeight,50)}
+function _ago(ts) { if (!ts) return ''; const d = (Date.now() - new Date(ts).getTime()) / 1000; if (d < 3600) return `${Math.floor(d / 60)}m ago`; if (d < 86400) return `${Math.floor(d / 3600)}h ago`; return `${Math.floor(d / 86400)}d ago` }
+function ago(ts) { const d = (Date.now() - new Date(ts).getTime()) / 1000; if (d < 3600) return `${Math.floor(d / 60)}m`; if (d < 86400) return `${Math.floor(d / 3600)}h`; return `${Math.floor(d / 86400)}d` }
 
-function addUser(t){
+function pick(t) { document.getElementById('inp').value = t; send() }
+function scrollEnd() { const c = document.getElementById('chat'); setTimeout(() => c.scrollTop = c.scrollHeight, 50) }
+
+function addUser(t) {
     document.getElementById('msgs').insertAdjacentHTML('beforeend',
         `<div class="msg msg-u"><div class="bub">${t}</div></div>`);
     scrollEnd();
 }
-function addTyping(){
+
+// ── Streaming Progress ──
+function addStreamProgress() {
     document.getElementById('msgs').insertAdjacentHTML('beforeend',
-        `<div class="msg msg-a" id="typing"><div class="lbl">ThetaFlow</div><div class="bub"><div class="typing"><span></span><span></span><span></span></div></div></div>`);
+        `<div class="msg msg-a" id="streamMsg"><div class="lbl">ThetaFlow</div><div class="bub">
+            <div class="stream-progress" id="streamProgress">
+                <div class="stream-bar-track"><div class="stream-bar-fill" id="streamBar" style="width:5%"></div></div>
+                <div class="stream-msg"><div class="stream-dot"></div> <span id="streamText">Identifying investment themes...</span></div>
+            </div>
+        </div></div>`);
     scrollEnd();
 }
-function rmTyping(){const e=document.getElementById('typing');if(e)e.remove()}
+function updateStreamProgress(pct, message) {
+    const bar = document.getElementById('streamBar');
+    const txt = document.getElementById('streamText');
+    if (bar) bar.style.width = pct + '%';
+    if (txt) txt.textContent = message;
+    scrollEnd();
+}
+function removeStreamMsg() {
+    const el = document.getElementById('streamMsg');
+    if (el) el.remove();
+}
 
-function renderAnalysis(d){
-    let h='<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub">';
+// ── Portfolio Allocation ──
+let lastAnalysisData = null;
+function computeAllocation(portfolioSize) {
+    if (!lastAnalysisData || !lastAnalysisData.top_picks?.length) return [];
+    const picks = lastAnalysisData.top_picks.filter(t => t.current_price > 0);
+    if (!picks.length) return [];
 
-    // ── SECTION 1: Verdict — big, clear, unmistakable ──
-    const topDir=d.top_picks?.[0]?.direction||'bullish';
-    const topConv=d.top_picks?.[0]?.conviction||0;
-    const isBull=topDir==='bullish';
-    const verdictColor=isBull?'var(--gn)':'var(--rd)';
-    const verdictBg=isBull?'#10b98112':'#ef444412';
-    const verdictBorder=isBull?'#10b98130':'#ef444430';
-    const verdictWord=isBull?'BULLISH':'BEARISH';
-    const verdictIcon=isBull?'📈':'📉';
-    const convLabel=topConv>.7?'Strong':topConv>.4?'Moderate':'Low';
+    // Conviction-weighted allocation
+    const totalConv = picks.reduce((s, t) => s + (t.conviction || 0.5), 0);
+    return picks.map(t => {
+        const weight = (t.conviction || 0.5) / totalConv;
+        const dollars = portfolioSize * weight;
+        const shares = t.current_price ? Math.floor(dollars / t.current_price) : 0;
+        return {
+            ticker: t.ticker,
+            company: t.company || '',
+            direction: t.direction || 'bullish',
+            conviction: t.conviction || 0.5,
+            weight: weight,
+            dollars: dollars,
+            shares: shares,
+            price: t.current_price,
+            action: t.action || 'BUY',
+        };
+    }).sort((a, b) => b.weight - a.weight);
+}
 
-    h+=`<div style="background:${verdictBg};border:1px solid ${verdictBorder};border-radius:12px;padding:16px 20px;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-            <div style="display:flex;align-items:center;gap:10px;">
+function renderAllocationTable(portfolioSize) {
+    const allocs = computeAllocation(portfolioSize);
+    if (!allocs.length) return '';
+    const maxWeight = Math.max(...allocs.map(a => a.weight));
+
+    let h = '<table class="alloc-table"><thead><tr>';
+    h += '<th>Ticker</th><th>Action</th><th>Weight</th><th>Amount</th><th>Shares</th><th>Price</th>';
+    h += '</tr></thead><tbody>';
+    allocs.forEach(a => {
+        const actCls = a.action === 'BUY' ? 'buy' : a.action === 'SHORT' ? 'short' : 'watch';
+        const barColor = a.direction === 'bullish' ? 'var(--gn)' : 'var(--rd)';
+        h += `<tr>
+            <td><strong style="color:var(--ac2)">${a.ticker}</strong> <span style="color:var(--mt);font-size:10px">${a.company.substring(0, 20)}</span></td>
+            <td><span class="tk-action ${actCls}" style="font-size:9px">${a.action}</span></td>
+            <td>${(a.weight * 100).toFixed(1)}%<div class="alloc-bar"><div class="alloc-bar-fill" style="width:${(a.weight / maxWeight * 100)}%;background:${barColor}"></div></div></td>
+            <td>$${a.dollars.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+            <td>${a.shares}</td>
+            <td>$${a.price.toFixed(2)}</td>
+        </tr>`;
+    });
+    h += '</tbody></table>';
+    return h;
+}
+
+function handleAllocInput(el) {
+    const raw = el.value.replace(/[^0-9.]/g, '');
+    const val = parseFloat(raw);
+    if (!val || val <= 0) return;
+    const container = document.getElementById('allocResult');
+    if (container) container.innerHTML = renderAllocationTable(val);
+}
+
+// ── Render Analysis ──
+function renderAnalysis(d) {
+    lastAnalysisData = d;
+    let h = '<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub">';
+
+    // Verdict
+    const topDir = d.top_picks?.[0]?.direction || 'bullish';
+    const topConv = d.top_picks?.[0]?.conviction || 0;
+    const isBull = topDir === 'bullish';
+    const verdictColor = isBull ? 'var(--gn)' : 'var(--rd)';
+    const verdictWord = isBull ? 'BULLISH' : 'BEARISH';
+    const verdictIcon = isBull ? '\u{1F4C8}' : '\u{1F4C9}';
+    const convLabel = topConv > .7 ? 'Strong' : topConv > .4 ? 'Moderate' : 'Low';
+
+    h += `<div class="verdict-wrap ${isBull ? '' : 'bear'}"><div class="verdict-inner">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:10px">
                 <span style="font-size:28px">${verdictIcon}</span>
                 <div>
                     <div style="font-size:22px;font-weight:900;color:${verdictColor};letter-spacing:1px">${verdictWord}</div>
-                    <div style="font-size:12px;color:var(--mt)">${convLabel} conviction · ${d.ai_time_horizon||'short-term horizon'}</div>
+                    <div style="font-size:11px;color:var(--mt);font-weight:500">${convLabel} conviction &middot; ${d.ai_time_horizon || 'short-term'}</div>
                 </div>
             </div>
-            <div style="text-align:right;">
-                <div style="font-size:28px;font-weight:900;color:${verdictColor}">${(topConv*100).toFixed(0)}%</div>
-                <div style="font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.5px">Confidence</div>
+            <div style="text-align:right">
+                <div style="font-size:30px;font-weight:900;color:${verdictColor};font-family:'JetBrains Mono',monospace">${(topConv * 100).toFixed(0)}%</div>
+                <div style="font-size:9px;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Confidence</div>
             </div>
         </div>
-        <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:${topConv*100}%;background:${verdictColor};border-radius:3px;transition:width .5s ease"></div>
+        <div style="height:4px;background:var(--bg2);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${topConv * 100}%;background:${verdictColor};border-radius:2px;transition:width .5s ease"></div>
         </div>
-    </div>`;
+    </div></div>`;
 
-    // ── SECTION 2: Themes — labeled clearly ──
-    if(d.chains?.length){
-        h+=`<div style="margin-bottom:14px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:6px">Investment Themes</div>
+    // Themes
+    if (d.chains?.length) {
+        h += `<div style="margin-bottom:14px">
+            <div class="sec-hdr" style="color:var(--mt)">Investment Themes</div>
             <div class="chain-flow">`;
-        d.chains.forEach(c=>{
-            h+=`<span class="chain-pill" style="border-color:${c.theme_color};color:${c.theme_color}">${c.chain_name}</span>`;
+        d.chains.forEach(c => {
+            h += `<span class="chain-pill" style="border-color:${c.theme_color};color:${c.theme_color}">${c.chain_name}</span>`;
         });
-        h+=`</div></div>`;
+        h += `</div></div>`;
     }
 
-    // ── SECTION 3: The Obvious Play (what everyone sees) ──
-    if(d.obvious_play){
-        const op=d.obvious_play;
-        const opIcon=op.direction==='bullish'?'📈':'📉';
-        h+=`<div style="background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:14px;border:1px solid var(--bd);opacity:.65">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:4px">⏩ The Obvious Play — Already Priced In</div>
-            <div style="font-size:13px;color:var(--mt)"><strong style="color:var(--ac)">${op.ticker}</strong> ${opIcon} ${op.summary}</div>
+    // Obvious Play
+    if (d.obvious_play) {
+        const op = d.obvious_play;
+        const opIcon = op.direction === 'bullish' ? '\u{1F4C8}' : '\u{1F4C9}';
+        h += `<div class="obvious">
+            <div class="obvious-tag">Already Priced In</div>
+            <div style="font-size:12px;color:var(--mt);flex:1"><strong style="color:var(--ac2)">${op.ticker}</strong> ${opIcon} ${op.summary}</div>
         </div>`;
     }
 
-    // ── SECTION 4: Summary (the key insight) ──
-    if(d.summary){
-        h+=`<div style="margin-bottom:16px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cy);margin-bottom:6px">💡 Key Insight</div>
+    // Summary
+    if (d.summary) {
+        h += `<div style="margin-bottom:16px">
+            <div class="sec-hdr" style="color:var(--cy)">&#128161; Key Insight</div>
             <p style="font-size:14px;line-height:1.7;margin:0">${d.summary}</p>
         </div>`;
     }
 
-    // ── SECTION 5: Historical Precedents (what happened before) ──
-    if(d.historical_precedents?.length){
-        h+=`<div style="margin-bottom:14px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cy);margin-bottom:8px">📜 What Happened Last Time</div>`;
-        d.historical_precedents.forEach(p=>{
-            h+=`<div class="precedent-box">
-                <div class="prec-event">${p.event} <span class="prec-date">· ${p.date||''}</span></div>
-                <div class="prec-outcomes">${(p.outcomes||[]).map(o=>{
-                    const clr=o.move?.startsWith('+')?'var(--gn)':'var(--rd)';
-                    return `<span class="prec-outcome"><strong style="color:var(--ac)">${o.ticker}</strong> <strong style="color:${clr}">${o.move}</strong> <span style="color:var(--mt)">${o.period}</span></span>`;
+    // Historical Precedents
+    if (d.historical_precedents?.length) {
+        h += `<div style="margin-bottom:14px">
+            <div class="sec-hdr" style="color:var(--cy)">&#128220; What Happened Last Time</div>`;
+        d.historical_precedents.forEach(p => {
+            h += `<div class="precedent-box">
+                <div class="prec-event">${p.event} <span class="prec-date">&middot; ${p.date || ''}</span></div>
+                <div class="prec-outcomes">${(p.outcomes || []).map(o => {
+                    const clr = o.move?.startsWith('+') ? 'var(--gn)' : 'var(--rd)';
+                    return `<span class="prec-outcome"><strong style="color:var(--ac2)">${o.ticker}</strong> <strong style="color:${clr}">${o.move}</strong> <span style="color:var(--mt)">${o.period}</span></span>`;
                 }).join('')}</div>
             </div>`;
         });
-        h+=`</div>`;
+        h += `</div>`;
     }
 
-    // ── SECTION 6: Compounding Catalysts ──
-    if(d.active_catalysts?.length){
-        h+=`<div class="catalysts-box">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--pu);margin-bottom:6px">⚡ Other Forces in Play Right Now</div>
-            ${d.active_catalysts.map(c=>`<div class="catalyst-item">${c}</div>`).join('')}
+    // Cross Catalysts
+    if (d.active_catalysts?.length) {
+        h += `<div class="catalysts-box">
+            <div class="sec-hdr" style="color:var(--pu);margin-bottom:6px">&#9889; Other Forces in Play</div>
+            ${d.active_catalysts.map(c => `<div class="catalyst-item">${c}</div>`).join('')}
         </div>`;
     }
 
-    // ── SECTION 7: Trades (the actionable part) ──
-    if(d.top_picks?.length){
-        h+=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cy);margin-bottom:10px;display:flex;align-items:center;gap:6px">🎯 Recommended Trades <span style="font-weight:400;color:var(--mt)">· Non-obvious plays the market hasn't priced in</span></div>`;
+    // Trades header
+    if (d.top_picks?.length) {
+        h += `<div class="sec-hdr" style="color:var(--cy);margin-bottom:10px">&#127919; Recommended Trades <span style="font-weight:400;color:var(--mt)">&middot; Non-obvious plays</span></div>`;
     }
 
     // Ticker cards
-    if(d.top_picks?.length){
-        d.top_picks.forEach(t=>{
-            const f=t.financials||{};
-            const chgCls=(t.change_pct||0)>=0?'positive':'negative';
-            const chgStr=t.current_price?`${t.change_pct>=0?'+':''}${t.change_pct.toFixed(1)}%`:'';
-            const prStr=t.current_price?`$${t.current_price.toFixed(2)}`:'';
-            const hzCls=(t.time_horizon||'')==='immediate'?'imm':(t.time_horizon||'')==='short_term'?'short':'med';
+    if (d.top_picks?.length) {
+        d.top_picks.forEach(t => {
+            const f = t.financials || {};
+            const chgStr = t.current_price ? `${t.change_pct >= 0 ? '+' : ''}${t.change_pct.toFixed(1)}%` : '';
+            const chgClr = (t.change_pct || 0) >= 0 ? 'var(--gn)' : 'var(--rd)';
+            const prStr = t.current_price ? `$${t.current_price.toFixed(2)}` : '';
+            const hzCls = (t.time_horizon || '') === 'immediate' ? 'imm' : (t.time_horizon || '') === 'short_term' ? 'short' : 'med';
 
-            // Compute projected 30d upside from conviction (used in header + metrics)
-            const projSign=t.direction==='bullish'?1:-1;
-            const proj30d=((Math.exp(projSign*t.conviction*0.003*22)-1)*100);
+            const projSign = t.direction === 'bullish' ? 1 : -1;
+            const proj30d = ((Math.exp(projSign * t.conviction * 0.003 * 22) - 1) * 100);
+            const action = (t.action || '').toUpperCase() || (t.direction === 'bullish' ? (t.conviction > .6 ? 'BUY' : 'WATCH') : (t.conviction > .6 ? 'SHORT' : 'AVOID'));
+            const actionCls = action === 'BUY' ? 'buy' : action === 'SHORT' || action === 'SELL' ? 'sell' : action === 'WATCH' ? 'watch' : 'avoid';
+            const targetPrice = t.current_price ? (t.current_price * (1 + proj30d / 100)).toFixed(2) : null;
+            const rr = t.risk_reward || null;
 
-            h+=`<div class="tk-card">`;
-            // Header with action badge
-            const action=(t.action||'').toUpperCase()||( t.direction==='bullish'?(t.conviction>.6?'BUY':'WATCH'):(t.conviction>.6?'SHORT':'AVOID'));
-            const actionCls=action==='BUY'?'buy':action==='SHORT'||action==='SELL'?'sell':action==='WATCH'?'watch':'avoid';
-            const targetPrice=t.current_price?(t.current_price*(1+proj30d/100)).toFixed(2):null;
-            const rr=t.risk_reward||null;
+            const orderNum = t.order || 1;
+            const orderBadge = orderNum >= 2 ? `<span class="order-badge ${orderNum >= 3 ? 'o3' : 'o2'}">${orderNum === 2 ? '2nd Order' : '3rd Order'}</span>` : '';
 
-            const orderNum=t.order||1;
-            const orderBadge=orderNum>=2?`<span class="order-badge ${orderNum>=3?'o3':'o2'}">${orderNum===2?'2nd Order':'3rd Order'}</span>`:'';
-
-            h+=`<div class="tk-head">
+            h += `<div class="tk-card">
+            <div class="tk-head">
                 <div class="tk-left">
-                    <div class="tk-dir ${t.direction==='bullish'?'bull':'bear'}"></div>
+                    <div class="tk-dir ${t.direction === 'bullish' ? 'bull' : 'bear'}"></div>
                     <span class="tk-sym">${t.ticker}</span>
                     <span class="tk-action ${actionCls}">${action}</span>
                     ${orderBadge}
                 </div>
                 <div class="tk-right">
                     <div class="tk-price">${prStr}</div>
-                    <div class="tk-chg ${chgCls}">${chgStr}</div>
-                    ${targetPrice?`<div class="tk-target">Target $${targetPrice}${rr?' · R/R '+rr:''}</div>`:''}
+                    <div class="tk-chg" style="color:${chgClr}">${chgStr}</div>
+                    ${targetPrice ? `<div class="tk-target">Target $${targetPrice}${rr ? ' &middot; R/R ' + rr : ''}</div>` : ''}
                 </div>
             </div>
-            <div style="padding:0 16px 8px;font-size:12px;color:var(--mt)">${t.company||''}</div>`;
+            <div style="padding:0 18px 8px;font-size:12px;color:var(--mt)">${t.company || ''}</div>`;
 
-            // Metrics grid — compact: max 5 key metrics + projected upside
-            const mets=[];
-            mets.push({v:(proj30d>=0?'+':'')+proj30d.toFixed(1)+'%',l:'30d Projected',c:proj30d>=0?'var(--gn)':'var(--rd)'});
-            if(f.market_cap)mets.push({v:f.market_cap,l:'Mkt Cap'});
-            if(f.pe_forward)mets.push({v:f.pe_forward+'x',l:'Fwd P/E'});
-            if(f.distance_from_high_pct!=null)mets.push({v:f.distance_from_high_pct+'%',l:'52w High'});
-            if(f.beta)mets.push({v:f.beta,l:'Beta'});
+            // Metrics
+            const mets = [];
+            mets.push({ v: (proj30d >= 0 ? '+' : '') + proj30d.toFixed(1) + '%', l: '30d Projected', c: proj30d >= 0 ? 'var(--gn)' : 'var(--rd)' });
+            if (f.market_cap) mets.push({ v: f.market_cap, l: 'Mkt Cap' });
+            if (f.pe_forward) mets.push({ v: f.pe_forward + 'x', l: 'Fwd P/E' });
+            if (f.distance_from_high_pct != null) mets.push({ v: f.distance_from_high_pct + '%', l: '52w High' });
+            if (f.beta) mets.push({ v: f.beta, l: 'Beta' });
 
-            if(mets.length){
-                h+='<div class="metrics">';
-                mets.forEach(m=>h+=`<div class="metric"><div class="metric-val"${m.c?` style="color:${m.c}"`:``}>${m.v}</div><div class="metric-lbl">${m.l}</div></div>`);
-                h+='</div>';
+            if (mets.length) {
+                h += '<div class="metrics">';
+                mets.forEach(m => h += `<div class="metric"><div class="metric-val"${m.c ? ` style="color:${m.c}"` : ''}>${m.v}</div><div class="metric-lbl">${m.l}</div></div>`);
+                h += '</div>';
             }
 
-            // Price chart
-            if(t.chart_data){
-                const chartId='chart_'+t.ticker+'_'+Date.now();
-                h+=`<div class="tk-chart">
+            // Chart
+            if (t.chart_data) {
+                const chartId = 'chart_' + t.ticker + '_' + Date.now();
+                h += `<div class="tk-chart">
                     <canvas id="${chartId}" height="200"></canvas>
                     <div class="chart-legend">
-                        <span><span class="dot" style="background:#6366f1"></span> Price History</span>
-                        <span><span class="dot" style="background:${t.direction==='bullish'?'#10b981':'#ef4444'}"></span> Projection (${(t.conviction*100).toFixed(0)}% conv.)</span>
-                        <span><span class="dot" style="background:#f59e0b"></span> Event Date</span>
+                        <span><span class="dot" style="background:var(--ac)"></span> Price History</span>
+                        <span><span class="dot" style="background:${t.direction === 'bullish' ? 'var(--gn)' : 'var(--rd)'}"></span> Projection (${(t.conviction * 100).toFixed(0)}%)</span>
+                        <span><span class="dot" style="background:var(--yl)"></span> Event</span>
                     </div>
                 </div>`;
             }
 
-            // Analysis
-            if(t.investment_analysis){
-                h+=`<div class="analysis">${t.investment_analysis}</div>`;
-            }
+            if (t.investment_analysis) h += `<div class="analysis">${t.investment_analysis}</div>`;
+            if (t.earnings_impact) h += `<div class="tk-earnings">&#128176; ${t.earnings_impact}</div>`;
+            if (t.precedent_move) h += `<div class="tk-precedent">&#128220; Precedent: ${t.precedent_move}</div>`;
 
-            // Earnings impact (quantified)
-            if(t.earnings_impact){
-                h+=`<div class="tk-earnings">💰 ${t.earnings_impact}</div>`;
-            }
-
-            // Historical precedent for this ticker
-            if(t.precedent_move){
-                h+=`<div class="tk-precedent">📜 Precedent: ${t.precedent_move}</div>`;
-            }
-
-            // Context bar
-            h+=`<div class="tk-ctx">
-                <span class="ctx-badge ${hzCls}">${(t.time_horizon||'short_term').replace('_',' ')}</span>
-                <span>${t.chain_name||''} → ${t.layer||''}</span>
-                <span style="margin-left:auto">${t.exposure||'medium'} exposure</span>
-            </div>`;
-            h+='</div>';
+            h += `<div class="tk-ctx">
+                <span class="ctx-badge ${hzCls}">${(t.time_horizon || 'short_term').replace('_', ' ')}</span>
+                <span>${t.chain_name || ''} &rarr; ${t.layer || ''}</span>
+                <span style="margin-left:auto">${t.exposure || 'medium'} exposure</span>
+            </div></div>`;
         });
     }
 
-    // Risk factors & contrarian view (from AI)
-    if(d.risk_factors?.length || d.contrarian_view){
-        h+='<div style="margin-top:16px;background:var(--s2);border-radius:10px;padding:14px;border-left:3px solid var(--yl)">';
-        if(d.risk_factors?.length){
-            h+='<div style="font-size:12px;font-weight:700;color:var(--yl);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⚠️ Risk Factors</div>';
-            h+='<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--mt)">';
-            d.risk_factors.forEach(r=>h+=`<li style="margin-bottom:4px">${r}</li>`);
-            h+='</ul>';
+    // Risk factors
+    if (d.risk_factors?.length || d.contrarian_view) {
+        h += `<div style="margin-top:16px;background:var(--s1);border-radius:var(--r2);padding:14px;border:1px solid var(--bd);border-left:3px solid var(--yl)">`;
+        if (d.risk_factors?.length) {
+            h += '<div style="font-size:11px;font-weight:800;color:var(--yl);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">&#9888;&#65039; Risk Factors</div>';
+            h += '<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--tx2)">';
+            d.risk_factors.forEach(r => h += `<li style="margin-bottom:4px">${r}</li>`);
+            h += '</ul>';
         }
-        if(d.contrarian_view){
-            h+=`<div style="margin-top:10px;font-size:13px;color:var(--mt)"><strong style="color:var(--yl)">🔄 Contrarian View:</strong> ${d.contrarian_view}</div>`;
+        if (d.contrarian_view) {
+            h += `<div style="margin-top:10px;font-size:13px;color:var(--tx2)"><strong style="color:var(--yl)">&#128260; Contrarian View:</strong> ${d.contrarian_view}</div>`;
         }
-        h+='</div>';
+        h += '</div>';
     }
 
     // AI badge
-    if(d.ai_powered){
-        h+='<div style="margin-top:12px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ac)"><span style="width:6px;height:6px;background:var(--ac);border-radius:50%;display:inline-block"></span> Analysis powered by Claude AI</div>';
+    if (d.ai_powered) {
+        h += '<div style="margin-top:12px;display:flex;align-items:center;gap:6px;font-size:10px;color:var(--ac2);font-weight:600"><span style="width:6px;height:6px;background:var(--ac);border-radius:50%;display:inline-block;box-shadow:0 0 8px var(--ac)"></span> Analysis powered by Claude AI</div>';
     }
 
-    // Pipeline visualization with projected upside
-    if(d.recommendations?.length){
-        const byChain={};
-        d.recommendations.forEach(r=>{
-            if(!byChain[r.chain_name])byChain[r.chain_name]={};
-            if(!byChain[r.chain_name][r.layer])byChain[r.chain_name][r.layer]=[];
+    // Portfolio Allocation section
+    if (d.top_picks?.length && d.top_picks.some(t => t.current_price > 0)) {
+        h += `<div class="alloc-section">
+            <div class="sec-hdr" style="color:var(--ac2);margin-bottom:10px">&#128188; My Portfolio Allocation</div>
+            <div class="alloc-input-row">
+                <div class="alloc-input-wrap">
+                    <span class="dollar-sign">$</span>
+                    <input type="text" class="alloc-input" placeholder="50,000" oninput="handleAllocInput(this)" id="allocInput">
+                </div>
+                <button class="alloc-btn" onclick="handleAllocInput(document.getElementById('allocInput'))">Calculate</button>
+            </div>
+            <div id="allocResult"></div>
+        </div>`;
+    }
+
+    // Pipeline
+    if (d.recommendations?.length) {
+        const byChain = {};
+        d.recommendations.forEach(r => {
+            if (!byChain[r.chain_name]) byChain[r.chain_name] = {};
+            if (!byChain[r.chain_name][r.layer]) byChain[r.chain_name][r.layer] = [];
             byChain[r.chain_name][r.layer].push(r);
         });
-        for(const[cn,layers] of Object.entries(byChain)){
-            h+=`<div class="pipeline"><div class="pipe-title">⛓️ ${cn}</div>`;
-            for(const[ln,tks] of Object.entries(layers)){
-                h+=`<div class="pipe-layer"><div class="pipe-dot"></div><div class="pipe-content">
+        for (const [cn, layers] of Object.entries(byChain)) {
+            h += `<div class="pipeline"><div class="pipe-title">&#9939;&#65039; ${cn}</div>`;
+            for (const [ln, tks] of Object.entries(layers)) {
+                h += `<div class="pipe-layer"><div class="pipe-dot"></div><div class="pipe-content">
                     <div class="pipe-layer-name">${ln}</div>
                     <div class="pipe-tickers">`;
-                tks.forEach(t=>{
-                    const p=t.current_price?`$${t.current_price.toFixed(0)}`:'';
-                    const sign=t.direction==='bullish'?1:-1;
-                    const upside=((Math.exp(sign*(t.conviction||0.5)*0.003*22)-1)*100);
-                    const upsideStr=(upside>=0?'+':'')+upside.toFixed(1)+'%';
-                    const upsideClr=upside>=0?'var(--gn)':'var(--rd)';
-                    h+=`<div class="pipe-tk"><span class="s">${t.ticker}</span> ${p} <span class="upside" style="color:${upsideClr}">${upsideStr}</span></div>`;
+                tks.forEach(t => {
+                    const p = t.current_price ? `$${t.current_price.toFixed(0)}` : '';
+                    const sign = t.direction === 'bullish' ? 1 : -1;
+                    const upside = ((Math.exp(sign * (t.conviction || 0.5) * 0.003 * 22) - 1) * 100);
+                    const upsideStr = (upside >= 0 ? '+' : '') + upside.toFixed(1) + '%';
+                    const upsideClr = upside >= 0 ? 'var(--gn)' : 'var(--rd)';
+                    h += `<div class="pipe-tk"><span class="s">${t.ticker}</span> ${p} <span class="upside" style="color:${upsideClr}">${upsideStr}</span></div>`;
                 });
-                h+='</div></div></div>';
+                h += '</div></div></div>';
             }
-            h+='</div>';
+            h += '</div>';
         }
     }
 
-    h+='<div class="disc">Not financial advice. Trend-based analysis for informational purposes only.</div>';
-    h+='</div></div>';
-    document.getElementById('msgs').insertAdjacentHTML('beforeend',h);
+    h += '<div class="disc">Not financial advice. Trend-based analysis for informational purposes only.</div>';
+    h += '</div></div>';
+    document.getElementById('msgs').insertAdjacentHTML('beforeend', h);
     scrollEnd();
 
-    // Initialize charts after DOM insertion
-    if(d.top_picks?.length && typeof Chart !== 'undefined'){
-        d.top_picks.forEach(t=>{
-            if(t.chart_data){
-                const el=document.querySelector(`[id^="chart_${t.ticker}_"]`);
-                if(el) renderTickerChart(el.id, t);
+    // Initialize charts
+    if (d.top_picks?.length && typeof Chart !== 'undefined') {
+        d.top_picks.forEach(t => {
+            if (t.chart_data) {
+                const el = document.querySelector(`[id^="chart_${t.ticker}_"]`);
+                if (el) renderTickerChart(el.id, t);
             }
         });
     }
 }
 
-function renderTickerChart(canvasId, tickerData){
-    const ctx=document.getElementById(canvasId);
-    if(!ctx) return;
+function renderTickerChart(canvasId, tickerData) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
 
-    const cd=tickerData.chart_data;
-    const hist=cd.history;
-    const proj=cd.projection;
-    const isBull=tickerData.direction==='bullish';
-    const projColor=isBull?'#10b981':'#ef4444';
+    const cd = tickerData.chart_data;
+    const hist = cd.history;
+    const proj = cd.projection;
+    const isBull = tickerData.direction === 'bullish';
+    const projColor = isBull ? 'var(--gn)' : 'var(--rd)';
+    const projHex = isBull ? '#00d68f' : '#ff6b6b';
 
-    const allLabels=[...hist.dates];
-    if(proj) allLabels.push(...proj.dates);
+    const allLabels = [...hist.dates];
+    if (proj) allLabels.push(...proj.dates);
 
-    const datasets=[];
+    const datasets = [];
 
-    // Historical price line
     datasets.push({
-        label:'Price',
-        data:hist.closes.map((v,i)=>({x:hist.dates[i],y:v})),
-        borderColor:'#6366f1',
-        backgroundColor:'transparent',
-        borderWidth:2,
-        pointRadius:0,
-        pointHitRadius:8,
-        tension:0.1,
-        order:2,
+        label: 'Price', data: hist.closes.map((v, i) => ({ x: hist.dates[i], y: v })),
+        borderColor: '#6c5ce7', backgroundColor: 'transparent', borderWidth: 2,
+        pointRadius: 0, pointHitRadius: 8, tension: 0.1, order: 2,
     });
 
-    if(proj){
-        // Projection center line (dashed)
+    if (proj) {
         datasets.push({
-            label:'Projected',
-            data:proj.center.map((v,i)=>({x:proj.dates[i],y:v})),
-            borderColor:projColor,
-            borderWidth:2,
-            borderDash:[6,3],
-            pointRadius:0,
-            tension:0.1,
-            order:3,
-        });
-
-        // 1-sigma cone (inner)
-        datasets.push({
-            label:'+1\u03c3',
-            data:proj.upper_1sd.map((v,i)=>({x:proj.dates[i],y:v})),
-            borderColor:'transparent',
-            backgroundColor:'transparent',
-            pointRadius:0,
-            fill:false,
-            order:4,
+            label: 'Projected', data: proj.center.map((v, i) => ({ x: proj.dates[i], y: v })),
+            borderColor: projHex, borderWidth: 2, borderDash: [6, 3],
+            pointRadius: 0, tension: 0.1, order: 3,
         });
         datasets.push({
-            label:'-1\u03c3',
-            data:proj.lower_1sd.map((v,i)=>({x:proj.dates[i],y:v})),
-            borderColor:'transparent',
-            backgroundColor:isBull?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)',
-            pointRadius:0,
-            fill:'-1',
-            order:5,
-        });
-
-        // 2-sigma cone (outer)
-        datasets.push({
-            label:'+2\u03c3',
-            data:proj.upper_2sd.map((v,i)=>({x:proj.dates[i],y:v})),
-            borderColor:'transparent',
-            backgroundColor:'transparent',
-            pointRadius:0,
-            fill:false,
-            order:6,
+            label: '+1\u03c3', data: proj.upper_1sd.map((v, i) => ({ x: proj.dates[i], y: v })),
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            pointRadius: 0, fill: false, order: 4,
         });
         datasets.push({
-            label:'-2\u03c3',
-            data:proj.lower_2sd.map((v,i)=>({x:proj.dates[i],y:v})),
-            borderColor:'transparent',
-            backgroundColor:isBull?'rgba(16,185,129,0.07)':'rgba(239,68,68,0.07)',
-            pointRadius:0,
-            fill:'-1',
-            order:7,
+            label: '-1\u03c3', data: proj.lower_1sd.map((v, i) => ({ x: proj.dates[i], y: v })),
+            borderColor: 'transparent',
+            backgroundColor: isBull ? 'rgba(0,214,143,0.12)' : 'rgba(255,107,107,0.12)',
+            pointRadius: 0, fill: '-1', order: 5,
+        });
+        datasets.push({
+            label: '+2\u03c3', data: proj.upper_2sd.map((v, i) => ({ x: proj.dates[i], y: v })),
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            pointRadius: 0, fill: false, order: 6,
+        });
+        datasets.push({
+            label: '-2\u03c3', data: proj.lower_2sd.map((v, i) => ({ x: proj.dates[i], y: v })),
+            borderColor: 'transparent',
+            backgroundColor: isBull ? 'rgba(0,214,143,0.05)' : 'rgba(255,107,107,0.05)',
+            pointRadius: 0, fill: '-1', order: 7,
         });
     }
 
-    const eventDate=hist.dates[hist.dates.length-1];
+    const eventDate = hist.dates[hist.dates.length - 1];
 
-    new Chart(ctx,{
-        type:'line',
-        data:{datasets},
-        options:{
-            responsive:true,
-            maintainAspectRatio:false,
-            interaction:{mode:'index',intersect:false},
-            plugins:{
-                legend:{display:false},
-                tooltip:{
-                    backgroundColor:'#1a2234',
-                    titleColor:'#e5e7eb',
-                    bodyColor:'#9ca3af',
-                    borderColor:'#1f2937',
-                    borderWidth:1,
-                    callbacks:{
-                        label:function(context){
-                            if(context.dataset.label==='Price'||context.dataset.label==='Projected')
-                                return context.dataset.label+': $'+context.parsed.y.toFixed(2);
+    new Chart(ctx, {
+        type: 'line', data: { datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#151d2e', titleColor: '#e8ecf4', bodyColor: '#7a8aa8',
+                    borderColor: '#1c2438', borderWidth: 1,
+                    titleFont: { family: 'Inter' }, bodyFont: { family: 'JetBrains Mono', size: 11 },
+                    callbacks: {
+                        label: function (context) {
+                            if (context.dataset.label === 'Price' || context.dataset.label === 'Projected')
+                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
                             return null;
                         }
                     }
                 },
             },
-            scales:{
-                x:{
-                    type:'category',
-                    labels:allLabels,
-                    grid:{color:'rgba(31,41,55,0.5)',drawTicks:false},
-                    ticks:{color:'#4b5563',font:{size:9},maxTicksLimit:8,maxRotation:0},
-                    border:{display:false},
+            scales: {
+                x: {
+                    type: 'category', labels: allLabels,
+                    grid: { color: 'rgba(28,36,56,0.5)', drawTicks: false },
+                    ticks: { color: '#3a4460', font: { size: 9, family: 'Inter' }, maxTicksLimit: 8, maxRotation: 0 },
+                    border: { display: false },
                 },
-                y:{
-                    grid:{color:'rgba(31,41,55,0.5)',drawTicks:false},
-                    ticks:{color:'#4b5563',font:{size:10},callback:v=>'$'+v.toFixed(0)},
-                    border:{display:false},
+                y: {
+                    grid: { color: 'rgba(28,36,56,0.5)', drawTicks: false },
+                    ticks: { color: '#3a4460', font: { size: 10, family: 'JetBrains Mono' }, callback: v => '$' + v.toFixed(0) },
+                    border: { display: false },
                 }
             }
         },
-        plugins:[{
-            id:'eventMarker',
-            afterDraw(chart){
-                const xScale=chart.scales.x;
-                const yScale=chart.scales.y;
-                const xPos=xScale.getPixelForValue(eventDate);
-                if(xPos){
-                    const c=chart.ctx;
+        plugins: [{
+            id: 'eventMarker',
+            afterDraw(chart) {
+                const xScale = chart.scales.x;
+                const yScale = chart.scales.y;
+                const xPos = xScale.getPixelForValue(eventDate);
+                if (xPos) {
+                    const c = chart.ctx;
                     c.save();
                     c.beginPath();
-                    c.setLineDash([4,4]);
-                    c.strokeStyle='#f59e0b';
-                    c.lineWidth=1.5;
-                    c.moveTo(xPos,yScale.top);
-                    c.lineTo(xPos,yScale.bottom);
+                    c.setLineDash([4, 4]);
+                    c.strokeStyle = '#feca57';
+                    c.lineWidth = 1.5;
+                    c.moveTo(xPos, yScale.top);
+                    c.lineTo(xPos, yScale.bottom);
                     c.stroke();
-                    c.fillStyle='#f59e0b';
-                    c.font='9px -apple-system,sans-serif';
-                    c.textAlign='center';
-                    c.fillText('EVENT',xPos,yScale.top-4);
+                    c.fillStyle = '#feca57';
+                    c.font = '600 9px Inter,sans-serif';
+                    c.textAlign = 'center';
+                    c.fillText('EVENT', xPos, yScale.top - 4);
                     c.restore();
                 }
             }
@@ -1133,43 +1416,142 @@ function renderTickerChart(canvasId, tickerData){
     });
 }
 
-async function send(){
-    const inp=document.getElementById('inp');
-    const t=inp.value.trim();if(!t)return;
-    inp.value='';
-    addUser(t);addTyping();
-    document.getElementById('sendBtn').disabled=true;
-    try{
-        const r=await fetch(`${API}/analyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({headline:t})});
-        const d=await r.json();rmTyping();
-        if(d.success&&d.chains_matched>0){renderAnalysis(d)}
-        else{document.getElementById('msgs').insertAdjacentHTML('beforeend',
-            `<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub"><p>I couldn't map this to any tracked value chains. Try mentioning specific companies, sectors (AI, semiconductors, cybersecurity), or macro events (rate cuts, energy policy).</p></div></div>`);scrollEnd()}
-    }catch(e){rmTyping();document.getElementById('msgs').insertAdjacentHTML('beforeend',
-        `<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub"><p style="color:var(--rd)">Analysis failed. Please try again.</p></div></div>`);scrollEnd()}
-    document.getElementById('sendBtn').disabled=false;
+// ── Send with Streaming ──
+async function send() {
+    const inp = document.getElementById('inp');
+    const t = inp.value.trim();
+    if (!t) return;
+    inp.value = '';
+    addUser(t);
+    document.getElementById('sendBtn').disabled = true;
+
+    // Try streaming endpoint first
+    try {
+        const response = await fetch(`${API}/analyze-stream`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ headline: t })
+        });
+
+        if (!response.ok || !response.body) {
+            // Fall back to non-streaming
+            await sendLegacy(t);
+            return;
+        }
+
+        addStreamProgress();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let aiResultReceived = false;
+        let finalData = null;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop() || '';
+
+            for (const part of parts) {
+                const lines = part.split('\n');
+                let eventType = null;
+                let eventData = null;
+
+                for (const line of lines) {
+                    if (line.startsWith('event: ')) eventType = line.slice(7);
+                    else if (line.startsWith('data: ')) {
+                        try { eventData = JSON.parse(line.slice(6)); } catch (e) {}
+                    }
+                }
+                if (!eventType || !eventData) continue;
+
+                if (eventType === 'status' || eventType === 'progress') {
+                    const pct = eventData.pct || (eventData.phase === 'enrich' ? 88 : 10);
+                    updateStreamProgress(pct, eventData.message || 'Processing...');
+                }
+                else if (eventType === 'ai_result') {
+                    aiResultReceived = true;
+                    updateStreamProgress(85, 'AI analysis complete, fetching live data...');
+                }
+                else if (eventType === 'complete') {
+                    finalData = eventData;
+                }
+                else if (eventType === 'error') {
+                    removeStreamMsg();
+                    document.getElementById('msgs').insertAdjacentHTML('beforeend',
+                        `<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub"><p style="color:var(--rd)">${eventData.message || 'Analysis failed.'}</p></div></div>`);
+                    scrollEnd();
+                    document.getElementById('sendBtn').disabled = false;
+                    return;
+                }
+            }
+        }
+
+        removeStreamMsg();
+
+        if (finalData && finalData.success && finalData.chains_matched > 0) {
+            renderAnalysis(finalData);
+        } else if (finalData) {
+            document.getElementById('msgs').insertAdjacentHTML('beforeend',
+                `<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub"><p>I couldn't map this to any tracked value chains. Try mentioning specific companies, sectors, or macro events.</p></div></div>`);
+            scrollEnd();
+        } else {
+            document.getElementById('msgs').insertAdjacentHTML('beforeend',
+                `<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub"><p style="color:var(--rd)">Analysis failed. Please try again.</p></div></div>`);
+            scrollEnd();
+        }
+    } catch (e) {
+        console.error('Stream failed, trying legacy:', e);
+        removeStreamMsg();
+        await sendLegacy(t);
+    }
+    document.getElementById('sendBtn').disabled = false;
 }
 
-function ago(ts){const d=(Date.now()-new Date(ts).getTime())/1000;if(d<3600)return`${Math.floor(d/60)}m`;if(d<86400)return`${Math.floor(d/3600)}h`;return`${Math.floor(d/86400)}d`}
+// Legacy non-streaming fallback
+async function sendLegacy(t) {
+    try {
+        addStreamProgress();
+        updateStreamProgress(30, 'Analyzing...');
+        const r = await fetch(`${API}/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ headline: t }) });
+        const d = await r.json();
+        removeStreamMsg();
+        if (d.success && d.chains_matched > 0) { renderAnalysis(d) }
+        else {
+            document.getElementById('msgs').insertAdjacentHTML('beforeend',
+                `<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub"><p>I couldn't map this to any tracked value chains. Try mentioning specific companies, sectors, or macro events.</p></div></div>`);
+            scrollEnd();
+        }
+    } catch (e) {
+        removeStreamMsg();
+        document.getElementById('msgs').insertAdjacentHTML('beforeend',
+            `<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub"><p style="color:var(--rd)">Analysis failed. Please try again.</p></div></div>`);
+        scrollEnd();
+    }
+    document.getElementById('sendBtn').disabled = false;
+}
 
 // Auth
-let authMode='login',user=null;
-async function checkAuth(){try{const r=await fetch(`${API}/auth/me`,{credentials:'same-origin'});const d=await r.json();if(d.authenticated){user=d.user;document.getElementById('authBtn').textContent=d.user.email.split('@')[0]}}catch(e){}}
-function showAuth(){if(user){if(confirm(`${user.email}\nTier: ${user.tier}\n\nSign out?`)){fetch(`${API}/auth/logout`,{method:'POST',credentials:'same-origin'});user=null;document.getElementById('authBtn').textContent='Sign In'}return}authMode='login';document.getElementById('authM').style.display='flex'}
-function toggleAuth(){authMode=authMode==='login'?'register':'login';document.getElementById('authT').textContent=authMode==='login'?'Sign In':'Create Account'}
-async function submitAuth(){const e=document.getElementById('aE').value,p=document.getElementById('aP').value;try{const r=await fetch(`${API}/auth/${authMode==='login'?'login':'register'}`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({email:e,password:p})});const d=await r.json();if(d.success||d.user){user=d.user;document.getElementById('authBtn').textContent=d.user.email.split('@')[0];document.getElementById('authM').style.display='none'}}catch(e){}}
+let authMode = 'login', user = null;
+async function checkAuth() { try { const r = await fetch(`${API}/auth/me`, { credentials: 'same-origin' }); const d = await r.json(); if (d.authenticated) { user = d.user; document.getElementById('authBtn').textContent = d.user.email.split('@')[0] } } catch (e) {} }
+function showAuth() { if (user) { if (confirm(`${user.email}\nTier: ${user.tier}\n\nSign out?`)) { fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'same-origin' }); user = null; document.getElementById('authBtn').textContent = 'Sign In' } return } authMode = 'login'; document.getElementById('authM').style.display = 'flex' }
+function toggleAuth() { authMode = authMode === 'login' ? 'register' : 'login'; document.getElementById('authT').textContent = authMode === 'login' ? 'Sign In' : 'Create Account' }
+async function submitAuth() { const e = document.getElementById('aE').value, p = document.getElementById('aP').value; try { const r = await fetch(`${API}/auth/${authMode === 'login' ? 'login' : 'register'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ email: e, password: p }) }); const d = await r.json(); if (d.success || d.user) { user = d.user; document.getElementById('authBtn').textContent = d.user.email.split('@')[0]; document.getElementById('authM').style.display = 'none' } } catch (e) {} }
 
-checkAuth();document.getElementById('inp').focus();
+checkAuth();
+document.getElementById('inp').focus();
 </script>
 
-<div style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center" id="authM">
-<div style="background:var(--s1);border:1px solid var(--bd);border-radius:16px;width:90%;max-width:400px;padding:32px;position:relative">
+<div style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(8px)" id="authM">
+<div style="background:var(--s1);border:1px solid var(--bd2);border-radius:var(--r3);width:90%;max-width:400px;padding:32px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.5)">
 <button onclick="document.getElementById('authM').style.display='none'" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--mt);font-size:24px;cursor:pointer">&times;</button>
-<h3 id="authT" style="margin-bottom:16px;text-align:center">Sign In</h3>
-<input type="email" id="aE" placeholder="Email" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);margin-bottom:12px;outline:none;font-size:14px">
-<input type="password" id="aP" placeholder="Password" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);margin-bottom:16px;outline:none;font-size:14px">
+<h3 id="authT" style="margin-bottom:16px;text-align:center;font-weight:800">Sign In</h3>
+<input type="email" id="aE" placeholder="Email" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--bd);border-radius:var(--r1);color:var(--tx);margin-bottom:12px;outline:none;font-size:14px;font-family:inherit">
+<input type="password" id="aP" placeholder="Password" style="width:100%;padding:12px;background:var(--s2);border:1px solid var(--bd);border-radius:var(--r1);color:var(--tx);margin-bottom:16px;outline:none;font-size:14px;font-family:inherit">
 <button class="send" style="width:100%;padding:12px;margin-bottom:12px" onclick="submitAuth()">Sign In</button>
-<p style="text-align:center;font-size:13px;color:var(--mt)">Don't have an account? <a href="#" onclick="toggleAuth()" style="color:var(--ac)">Register</a></p>
+<p style="text-align:center;font-size:13px;color:var(--mt)">Don't have an account? <a href="#" onclick="toggleAuth()" style="color:var(--ac2)">Register</a></p>
 </div></div>
 </body>
 </html>

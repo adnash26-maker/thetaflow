@@ -215,7 +215,14 @@ def get_top_headlines():
     headlines = []
     for category, info in feeds.items():
         try:
-            resp = requests.get(info["url"], headers={"User-Agent": "ThetaFlow/1.0"}, timeout=6)
+            # Cache-busting: timestamp param + no-cache headers to bypass CDN/proxy caches
+            cache_bust_url = f"{info['url']}?_t={int(time.time())}"
+            resp = requests.get(cache_bust_url, headers={
+                "User-Agent": "ThetaFlow/1.0",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "If-None-Match": "",  # Force fresh response
+            }, timeout=6)
             if resp.status_code != 200:
                 continue
             root = ET.fromstring(resp.content)
@@ -233,7 +240,11 @@ def get_top_headlines():
         except Exception:
             pass
 
-    return jsonify({"success": True, "headlines": headlines})
+    response = jsonify({"success": True, "headlines": headlines})
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.route("/api/signals", methods=["GET"])
 def get_signals():
@@ -287,6 +298,115 @@ def get_signals():
         "count": len(signals),
         "generated_at": datetime.utcnow().isoformat(),
     })
+
+@app.route("/api/analyze-stream", methods=["POST"])
+def analyze_stream():
+    """Stream analysis results via SSE for progressive rendering."""
+    from financial_data import get_full_financials_batch, get_ticker_chart_data
+    from concurrent.futures import ThreadPoolExecutor
+
+    data = request.json or {}
+    headline = data.get("headline", "").strip()
+    if not headline:
+        return jsonify({"error": "headline is required"}), 400
+
+    def sse(event_type, payload):
+        return f"event: {event_type}\ndata: {json.dumps(payload)}\n\n"
+
+    def generate():
+        yield sse("status", {"message": "Identifying investment themes...", "phase": "ai", "pct": 5})
+
+        if not analyst.available:
+            yield sse("error", {"message": "AI analyst not available"})
+            return
+
+        try:
+            # Stream Claude API — send progress as tokens arrive
+            prompt = analyst._build_dynamic_prompt(headline)
+            full_text = ""
+
+            with analyst.client.messages.stream(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4000,
+                messages=[{"role": "user", "content": prompt}]
+            ) as stream:
+                token_count = 0
+                last_pct = 5
+                for chunk in stream.text_stream:
+                    full_text += chunk
+                    token_count += 1
+                    # Send progress every ~40 tokens (~10 updates total)
+                    pct = min(5 + int(token_count / 5), 85)
+                    if pct >= last_pct + 8:
+                        last_pct = pct
+                        messages = [
+                            "Analyzing supply chain connections...",
+                            "Finding historical precedents...",
+                            "Computing earnings impact...",
+                            "Identifying cross-catalyst compounding...",
+                            "Scoring conviction levels...",
+                            "Ranking non-obvious plays...",
+                            "Building trade recommendations...",
+                            "Quantifying risk/reward...",
+                            "Finalizing analysis...",
+                        ]
+                        msg_idx = min(pct // 10, len(messages) - 1)
+                        yield sse("progress", {"pct": pct, "message": messages[msg_idx]})
+
+            # Parse the complete response
+            ai_result = analyst._parse_dynamic_result(full_text)
+            if not ai_result or not ai_result.get("top_picks"):
+                yield sse("error", {"message": "Could not generate analysis. Try a more specific headline."})
+                return
+
+            # Send raw AI result immediately (before financial enrichment)
+            yield sse("ai_result", {
+                "chains": ai_result.get("chains", []),
+                "summary": ai_result.get("summary", ""),
+                "obvious_play": ai_result.get("obvious_play"),
+                "historical_precedents": ai_result.get("historical_precedents", []),
+                "active_catalysts": ai_result.get("active_catalysts", []),
+                "top_picks_preview": [
+                    {"ticker": p.get("ticker"), "company": p.get("company"),
+                     "direction": p.get("direction"), "conviction": p.get("conviction"),
+                     "action": p.get("action"), "order": p.get("order"),
+                     "thesis": p.get("thesis"), "earnings_impact": p.get("earnings_impact"),
+                     "precedent_move": p.get("precedent_move"), "layer": p.get("layer"),
+                     "chain_name": p.get("chain_name"), "exposure": p.get("exposure"),
+                     "time_horizon": p.get("time_horizon"), "impact_score": p.get("impact_score"),
+                     "risk_reward": p.get("risk_reward")}
+                    for p in ai_result.get("top_picks", [])
+                ],
+                "risk_factors": ai_result.get("risk_factors", []),
+                "contrarian_view": ai_result.get("contrarian_view", ""),
+                "time_horizon": ai_result.get("time_horizon", ""),
+            })
+
+            yield sse("status", {"message": "Fetching live market data...", "phase": "enrich", "pct": 88})
+
+            # Enrich with financial data
+            enriched = _enrich_dynamic_result(ai_result, headline)
+            enriched["ai_powered"] = True
+            enriched["dynamic_chains"] = True
+
+            _save_recommendations(enriched)
+
+            yield sse("complete", {"success": True, **enriched})
+
+        except Exception as e:
+            logger.error(f"Stream analysis failed: {e}")
+            yield sse("error", {"message": f"Analysis failed: {str(e)[:100]}"})
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        }
+    )
+
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze_event_endpoint():

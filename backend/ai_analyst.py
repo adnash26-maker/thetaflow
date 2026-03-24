@@ -130,16 +130,9 @@ IMPORTANT:
             logger.error(f"AI analysis failed: {e}")
             return {"analysis": "", "ticker_analyses": {}, "risk_factors": []}
 
-    def generate_dynamic_chains(self, headline: str) -> Optional[Dict]:
-        """Use Claude to dynamically generate value chain analysis for a headline.
-
-        Instead of matching against pre-built chains, Claude identifies
-        relevant investment themes and builds chains on the fly.
-        """
-        if not self.available:
-            return None
-
-        prompt = f"""You are a senior PM at a multi-strategy hedge fund writing an actionable trade memo. Your analysis must contain three things a human cannot compute in their head: (1) historical precedent with actual outcomes, (2) precise earnings math, (3) cross-catalyst compounding.
+    def _build_dynamic_prompt(self, headline: str) -> str:
+        """Build the prompt for dynamic chain generation. Extracted for reuse by streaming."""
+        return f"""You are a senior PM at a multi-strategy hedge fund writing an actionable trade memo. Your analysis must contain three things a human cannot compute in their head: (1) historical precedent with actual outcomes, (2) precise earnings math, (3) cross-catalyst compounding.
 
 EVENT: {headline}
 
@@ -222,15 +215,10 @@ CRITICAL RULES:
 - risk_reward: "3:1", "5:1", etc.
 - theme_color: hex color matching the sector."""
 
+    def _parse_dynamic_result(self, text: str) -> Optional[Dict]:
+        """Parse and normalize Claude's dynamic chain JSON response."""
         try:
-            response = self.client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=4000,
-                messages=[{"role": "user", "content": prompt}]
-            )
-
-            text = response.content[0].text.strip()
-
+            text = text.strip()
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0].strip()
             elif "```" in text:
@@ -267,6 +255,29 @@ CRITICAL RULES:
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse dynamic chain JSON: {e}")
             return None
+        except Exception as e:
+            logger.error(f"Dynamic chain result parsing failed: {e}")
+            return None
+
+    def generate_dynamic_chains(self, headline: str) -> Optional[Dict]:
+        """Use Claude to dynamically generate value chain analysis for a headline.
+
+        Instead of matching against pre-built chains, Claude identifies
+        relevant investment themes and builds chains on the fly.
+        """
+        if not self.available:
+            return None
+
+        prompt = self._build_dynamic_prompt(headline)
+
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4000,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            text = response.content[0].text
+            return self._parse_dynamic_result(text)
         except Exception as e:
             logger.error(f"Dynamic chain generation failed: {e}")
             return None
