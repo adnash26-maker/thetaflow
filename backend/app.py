@@ -193,7 +193,7 @@ def get_top_headlines():
         "Technology": {"url": "https://feeds.a.dj.com/rss/RSSWSJD.xml", "color": "#8b5cf6"},
         "Markets": {"url": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml", "color": "#6366f1"},
         "Business": {"url": "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml", "color": "#10b981"},
-        "World": {"url": "https://feeds.a.dj.com/rss/RSSWorldNews.xml", "color": "#f59e0b"},
+        "Economy": {"url": "https://feeds.a.dj.com/rss/RSSEconomy.xml", "color": "#f59e0b"},
     }
 
     headlines = []
@@ -573,6 +573,7 @@ def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
     """Enrich Claude's dynamic chain result with live financial data and charts.
     Uses parallel batch fetching for speed."""
     from financial_data import get_full_financials_batch, get_ticker_chart_data
+    from concurrent.futures import ThreadPoolExecutor
 
     all_picks = ai_result.get("top_picks", []) + [
         r for r in ai_result.get("recommendations", [])
@@ -590,6 +591,22 @@ def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
 
     # Parallel batch fetch all financials at once
     batch_data = get_full_financials_batch(unique_tickers[:12])
+
+    # Pre-fetch chart data in parallel for top 5 tickers
+    chart_tickers = unique_tickers[:5]
+    chart_data_map = {}
+    if chart_tickers:
+        def _fetch_chart(tk):
+            # Find the pick to get direction/conviction
+            for p in all_picks:
+                if p.get("ticker", "").upper().strip() == tk:
+                    return (tk, get_ticker_chart_data(tk, p.get("direction", "bullish"), p.get("conviction", 0.5)))
+            return (tk, get_ticker_chart_data(tk))
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            for tk, chart in executor.map(lambda t: _fetch_chart(t), chart_tickers):
+                if chart:
+                    chart_data_map[tk] = chart
 
     valid_picks = []
     seen_tickers = set()
@@ -622,15 +639,9 @@ def _enrich_dynamic_result(ai_result: dict, headline: str) -> dict:
 
         pick["investment_analysis"] = pick.get("thesis", "")
 
-        # Chart data for top 5 only
-        if len(valid_picks) < 5:
-            chart = get_ticker_chart_data(
-                ticker,
-                direction=pick.get("direction", "bullish"),
-                conviction=pick.get("conviction", 0.5)
-            )
-            if chart:
-                pick["chart_data"] = chart
+        # Attach pre-fetched chart data
+        if ticker in chart_data_map:
+            pick["chart_data"] = chart_data_map[ticker]
 
         valid_picks.append(pick)
 
