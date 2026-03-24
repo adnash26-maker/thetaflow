@@ -10,31 +10,31 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
         :root {
-            --bg: #06090f;
-            --bg2: #0b1018;
-            --s1: #0f1520;
-            --s2: #151d2e;
-            --s3: #1b2540;
-            --bd: #1c2438;
-            --bd2: #263354;
-            --tx: #e8ecf4;
-            --tx2: #c0c8d8;
-            --mt: #7a8aa8;
-            --ac: #6c5ce7;
-            --ac2: #a29bfe;
-            --gn: #00d68f;
-            --gn2: #00b87a;
-            --rd: #ff6b6b;
-            --rd2: #ee5a5a;
-            --yl: #feca57;
-            --cy: #0abde3;
-            --cy2: #48dbfb;
-            --pu: #a855f7;
-            --glass: rgba(15, 21, 32, 0.7);
-            --glow: 0 0 30px rgba(108, 92, 231, 0.08);
-            --r1: 8px;
-            --r2: 12px;
-            --r3: 16px;
+            --bg: #04080d;
+            --bg2: #080e16;
+            --s1: #0c1219;
+            --s2: #111a24;
+            --s3: #182230;
+            --bd: #182230;
+            --bd2: #243040;
+            --tx: #d4dce8;
+            --tx2: #a0aec0;
+            --mt: #6b7d96;
+            --ac: #22d3ee;
+            --ac2: #67e8f9;
+            --gn: #34d399;
+            --gn2: #10b981;
+            --rd: #f87171;
+            --rd2: #ef4444;
+            --yl: #fbbf24;
+            --cy: #22d3ee;
+            --cy2: #67e8f9;
+            --pu: #818cf8;
+            --glass: rgba(8, 14, 22, 0.85);
+            --glow: 0 1px 3px rgba(0,0,0,.3);
+            --r1: 4px;
+            --r2: 6px;
+            --r3: 8px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box }
         body {
@@ -58,14 +58,10 @@
             flex-shrink: 0; z-index: 50;
             position: relative;
         }
-        .nav::after {
-            content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(108,92,231,0.3), rgba(10,189,227,0.2), transparent);
-        }
         .logo {
-            font-size: 18px; font-weight: 900; letter-spacing: -0.5px;
-            background: linear-gradient(135deg, var(--ac2), var(--cy));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-size: 15px; font-weight: 800; letter-spacing: 1.5px;
+            color: var(--ac); text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
             cursor: pointer; user-select: none;
         }
         .nav-left { display: flex; align-items: center; gap: 12px; position: relative }
@@ -88,7 +84,7 @@
             color: var(--mt); transition: all .15s;
         }
         .nav-item:hover { background: var(--s2); color: var(--tx) }
-        .nav-item.active { background: rgba(108,92,231,0.12); color: var(--ac2) }
+        .nav-item.active { background: rgba(34,211,238,0.08); color: var(--ac) }
         .nav-item-icon { font-size: 15px; width: 20px; text-align: center }
         .nav-sep { height: 1px; background: var(--bd); margin: 4px 8px }
         .nav-r { display: flex; gap: 8px }
@@ -99,49 +95,35 @@
         }
         .btn:hover { border-color: var(--ac); color: var(--tx); background: var(--s3) }
 
-        /* ── Chat ── */
-        .chat { flex: 1; overflow-y: auto; padding: 20px 0 }
-        .chat-w { max-width: 880px; margin: 0 auto; padding: 0 20px }
-        .msg { margin-bottom: 24px; animation: fi .35s ease }
-        @keyframes fi { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
-        .msg-u { display: flex; justify-content: flex-end }
+        /* ── Feed ── */
+        .chat { flex: 1; overflow-y: auto; padding: 16px 0 }
+        .chat-w { max-width: 900px; margin: 0 auto; padding: 0 20px }
+        .msg { margin-bottom: 16px; animation: fi .25s ease }
+        @keyframes fi { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
+        .msg-u { margin-bottom: 2px }
         .msg-u .bub {
-            background: linear-gradient(135deg, var(--ac), #5a4bd4);
-            border-radius: 18px 18px 4px 18px; max-width: 70%; padding: 12px 18px;
-            font-size: 14px; font-weight: 500; box-shadow: 0 4px 20px rgba(108,92,231,0.2);
+            background: var(--s2); border: 1px solid var(--bd);
+            border-radius: var(--r1); padding: 8px 14px;
+            font-size: 13px; font-weight: 500; color: var(--ac);
+            font-family: 'JetBrains Mono', monospace;
+            display: inline-block;
         }
-        .msg-a .lbl {
-            font-size: 10px; color: var(--mt); margin-bottom: 6px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: .8px;
-        }
+        .msg-u .bub::before { content: '> '; color: var(--mt); }
+        .msg-a .lbl { display: none }
         .msg-a .bub {
-            background: var(--s1); border: 1px solid var(--bd);
-            border-radius: 4px 18px 18px 18px; padding: 22px; overflow: hidden;
-            box-shadow: var(--glow);
+            background: transparent; border: none;
+            border-radius: 0; padding: 0; overflow: hidden;
         }
 
         /* ── Verdict Banner ── */
         .verdict-wrap {
-            border-radius: var(--r2); margin-bottom: 18px; overflow: hidden;
-            position: relative;
+            border-radius: var(--r1); margin-bottom: 16px; overflow: hidden;
+            border: 1px solid var(--bd); border-left: 3px solid var(--gn);
         }
-        .verdict-wrap::before {
-            content: ''; position: absolute; inset: 0; border-radius: var(--r2);
-            padding: 1px;
-            background: linear-gradient(135deg, var(--gn), transparent 60%);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor; mask-composite: exclude;
-            pointer-events: none;
-        }
-        .verdict-wrap.bear::before {
-            background: linear-gradient(135deg, var(--rd), transparent 60%);
-        }
+        .verdict-wrap.bear { border-left-color: var(--rd) }
         .verdict-inner {
-            padding: 18px 22px;
-            background: linear-gradient(135deg, rgba(0,214,143,0.06), transparent);
-        }
-        .verdict-wrap.bear .verdict-inner {
-            background: linear-gradient(135deg, rgba(255,107,107,0.06), transparent);
+            padding: 14px 18px;
+            background: var(--s1);
         }
 
         /* ── Obvious Play ── */
@@ -186,7 +168,7 @@
             margin-bottom: 14px; border: 1px solid var(--bd); border-left: 3px solid var(--pu);
         }
         .catalyst-item { font-size: 12px; color: var(--mt); padding: 2px 0; line-height: 1.5 }
-        .catalyst-item::before { content: '\26A1'; margin-right: 6px }
+        .catalyst-item::before { content: '\2022'; margin-right: 6px; color: var(--pu) }
 
         /* ── Chain Flow ── */
         .chain-flow { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; flex-wrap: wrap }
@@ -197,20 +179,20 @@
 
         /* ── Ticker Card ── */
         .tk-card {
-            background: var(--s1); border-radius: var(--r2); margin-bottom: 12px;
+            background: var(--s1); border-radius: var(--r1); margin-bottom: 10px;
             overflow: hidden; border: 1px solid var(--bd);
-            transition: border-color .2s, box-shadow .3s;
+            transition: border-color .15s;
         }
-        .tk-card:hover { border-color: var(--bd2); box-shadow: var(--glow) }
+        .tk-card:hover { border-color: var(--bd2) }
         .tk-head {
             display: flex; justify-content: space-between; align-items: center;
             padding: 14px 18px; cursor: pointer;
         }
         .tk-left { display: flex; align-items: center; gap: 10px }
         .tk-dir { width: 8px; height: 8px; border-radius: 50% }
-        .tk-dir.bull { background: var(--gn); box-shadow: 0 0 8px rgba(0,214,143,0.4) }
-        .tk-dir.bear { background: var(--rd); box-shadow: 0 0 8px rgba(255,107,107,0.4) }
-        .tk-sym { font-weight: 900; font-size: 16px; color: var(--ac2); letter-spacing: .5px }
+        .tk-dir.bull { background: var(--gn) }
+        .tk-dir.bear { background: var(--rd) }
+        .tk-sym { font-weight: 800; font-size: 15px; color: var(--tx); letter-spacing: .5px; font-family: 'JetBrains Mono', monospace }
         .tk-name { color: var(--mt); font-size: 12px; font-weight: 500 }
         .tk-action {
             padding: 3px 10px; border-radius: 5px; font-size: 10px;
@@ -274,7 +256,7 @@
         }
         .ctx-badge.imm { color: var(--yl) }
         .ctx-badge.short { color: var(--cy) }
-        .ctx-badge.med { color: var(--ac2) }
+        .ctx-badge.med { color: var(--ac) }
 
         /* ── Pipeline ── */
         .pipeline { margin-top: 16px }
@@ -301,7 +283,7 @@
             font-size: 11px; padding: 3px 8px; border-radius: 4px;
             background: var(--bg2); display: flex; align-items: center; gap: 4px;
         }
-        .pipe-tk .s { font-weight: 800; color: var(--ac2) }
+        .pipe-tk .s { font-weight: 800; color: var(--ac) }
         .pipe-tk .upside { font-weight: 700; margin-left: 2px }
 
         /* ── Portfolio Allocation (new) ── */
@@ -329,7 +311,7 @@
         .alloc-input:focus { border-color: var(--ac) }
         .alloc-btn {
             padding: 10px 18px; border-radius: var(--r1); border: 1px solid var(--ac);
-            background: rgba(108,92,231,0.12); color: var(--ac2);
+            background: rgba(108,92,231,0.12); color: var(--ac);
             font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer;
             transition: all .2s;
         }
@@ -356,11 +338,11 @@
         /* ── Suggestions ── */
         .sugg { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px }
         .sugg-pill {
-            padding: 8px 14px; border-radius: 20px; border: 1px solid var(--bd);
-            background: var(--s1); cursor: pointer; font-size: 12px; font-weight: 500;
-            transition: all .2s; max-width: 100%;
+            padding: 7px 12px; border-radius: var(--r1); border: 1px solid var(--bd);
+            background: var(--s2); cursor: pointer; font-size: 11px; font-weight: 500;
+            transition: all .15s; max-width: 100%;
         }
-        .sugg-pill:hover { border-color: var(--ac); transform: translateY(-1px); box-shadow: var(--glow) }
+        .sugg-pill:hover { border-color: var(--ac); background: var(--s3) }
 
         /* ── Scorecard ── */
         .scorecard { margin-bottom: 14px }
@@ -376,7 +358,7 @@
             border: 1px solid var(--bd); cursor: pointer; transition: border-color .2s;
         }
         .sc-row:hover { border-color: var(--ac) }
-        .sc-ticker { font-weight: 800; color: var(--ac2); width: 48px }
+        .sc-ticker { font-weight: 800; color: var(--ac); width: 48px }
         .sc-action { font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 3px }
         .sc-action.buy { background: rgba(0,214,143,0.12); color: var(--gn) }
         .sc-action.short { background: rgba(255,107,107,0.12); color: var(--rd) }
@@ -428,21 +410,22 @@
         }
         .input-w { max-width: 880px; margin: 0 auto; display: flex; gap: 8px }
         .input-w input {
-            flex: 1; padding: 13px 18px; background: var(--s1); border: 1px solid var(--bd);
-            border-radius: var(--r3); color: var(--tx); font-size: 14px; font-weight: 500;
-            font-family: inherit; outline: none; transition: border-color .2s;
+            flex: 1; padding: 11px 14px; background: var(--bg2); border: 1px solid var(--bd);
+            border-radius: var(--r1); color: var(--tx); font-size: 13px; font-weight: 500;
+            font-family: 'JetBrains Mono', monospace; outline: none; transition: border-color .2s;
         }
-        .input-w input:focus { border-color: var(--ac); box-shadow: 0 0 20px rgba(108,92,231,0.1) }
-        .input-w input::placeholder { color: #3a4460 }
+        .input-w input:focus { border-color: var(--ac) }
+        .input-w input::placeholder { color: #2a3548 }
         .send {
-            padding: 13px 24px; border-radius: var(--r3); border: none;
-            background: linear-gradient(135deg, var(--ac), #5a4bd4);
-            color: white; font-size: 13px; font-weight: 700; font-family: inherit;
-            cursor: pointer; transition: all .2s; letter-spacing: .3px;
-            box-shadow: 0 4px 15px rgba(108,92,231,0.3);
+            padding: 11px 20px; border-radius: var(--r1); border: 1px solid var(--ac);
+            background: rgba(34,211,238,0.08);
+            color: var(--ac); font-size: 12px; font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer; transition: all .15s; letter-spacing: .5px;
+            text-transform: uppercase;
         }
-        .send:hover { box-shadow: 0 4px 20px rgba(108,92,231,0.5); transform: translateY(-1px) }
-        .send:disabled { opacity: .4; transform: none; box-shadow: none }
+        .send:hover { background: rgba(34,211,238,0.15) }
+        .send:disabled { opacity: .3 }
 
         .typing { display: flex; gap: 4px; padding: 8px 0 }
         .typing span {
@@ -464,12 +447,12 @@
         /* ── Stock Picks ── */
         .picks-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px }
         .pick-card {
-            background: var(--s1); border-radius: var(--r2); padding: 16px;
-            border: 1px solid var(--bd); cursor: pointer; transition: all .2s;
+            background: var(--s1); border-radius: var(--r1); padding: 14px;
+            border: 1px solid var(--bd); cursor: pointer; transition: border-color .15s;
         }
-        .pick-card:hover { border-color: var(--bd2); box-shadow: var(--glow) }
+        .pick-card:hover { border-color: var(--bd2) }
         .pick-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px }
-        .pick-ticker { font-weight: 900; font-size: 16px; color: var(--ac2) }
+        .pick-ticker { font-weight: 900; font-size: 16px; color: var(--ac) }
         .pick-price { font-weight: 800; font-size: 14px; font-family: 'JetBrains Mono', monospace }
         .pick-company { font-size: 11px; color: var(--mt); margin-bottom: 6px }
         .pick-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap }
@@ -480,7 +463,7 @@
             background: var(--s1); cursor: pointer; font-size: 12px; font-weight: 600;
             font-family: inherit; transition: all .2s;
         }
-        .pick-filter:hover, .pick-filter.active { border-color: var(--ac); color: var(--ac2) }
+        .pick-filter:hover, .pick-filter.active { border-color: var(--ac); color: var(--ac) }
 
         /* ── Portfolio ── */
         .port-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px }
@@ -489,7 +472,7 @@
             text-align: center; border: 1px solid var(--bd);
         }
         .port-stat-val {
-            font-size: 28px; font-weight: 900; color: var(--ac2);
+            font-size: 28px; font-weight: 900; color: var(--ac);
             font-family: 'JetBrains Mono', monospace;
         }
         .port-stat-lbl {
@@ -517,8 +500,8 @@
             margin-bottom: 6px; border: 1px solid var(--bd); display: flex;
             align-items: center; gap: 10px; cursor: pointer; transition: all .2s;
         }
-        .trend-card:hover { border-color: var(--bd2); box-shadow: var(--glow) }
-        .trend-ticker { font-weight: 800; color: var(--ac2); min-width: 48px }
+        .trend-card:hover { border-color: var(--bd2) }
+        .trend-ticker { font-weight: 800; color: var(--tx); min-width: 48px; font-family: 'JetBrains Mono', monospace }
         .trend-body { flex: 1; min-width: 0 }
         .trend-headline { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
         .trend-meta { font-size: 10px; color: var(--mt) }
@@ -584,13 +567,13 @@
         <button class="menu-btn" onclick="toggleMenu()" id="menuBtn">&#9776;</button>
         <div class="logo" onclick="showView('analyze')">ThetaFlow</div>
         <div class="nav-drop" id="navDrop">
-            <div class="nav-item active" data-view="analyze" onclick="showView('analyze')"><span class="nav-item-icon">&#9889;</span> Analyze</div>
-            <div class="nav-item" data-view="picks" onclick="showView('picks')"><span class="nav-item-icon">&#127919;</span> Stock Picks</div>
-            <div class="nav-item" data-view="portfolio" onclick="showView('portfolio')"><span class="nav-item-icon">&#128202;</span> Portfolio</div>
-            <div class="nav-item" data-view="trending" onclick="showView('trending')"><span class="nav-item-icon">&#128293;</span> Trending Trades</div>
+            <div class="nav-item active" data-view="analyze" onclick="showView('analyze')">Analyze</div>
+            <div class="nav-item" data-view="picks" onclick="showView('picks')">Stock Picks</div>
+            <div class="nav-item" data-view="portfolio" onclick="showView('portfolio')">Portfolio</div>
+            <div class="nav-item" data-view="trending" onclick="showView('trending')">Trending</div>
             <div class="nav-sep"></div>
-            <div class="nav-item" data-view="how" onclick="showView('how')"><span class="nav-item-icon">&#10067;</span> How It Works</div>
-            <div class="nav-item" onclick="location.href=API+'/export'"><span class="nav-item-icon">&#128228;</span> Export CSV</div>
+            <div class="nav-item" data-view="how" onclick="showView('how')">How It Works</div>
+            <div class="nav-item" onclick="location.href=API+'/export'">Export CSV</div>
         </div>
     </div>
     <div class="nav-r">
@@ -602,32 +585,29 @@
 <div class="view active" id="view-analyze">
 <div class="chat" id="chat">
 <div class="chat-w" id="chatW">
-    <div class="msg msg-a">
-        <div class="lbl">ThetaFlow</div>
-        <div class="bub">
-            <div style="font-size:20px;font-weight:900;margin-bottom:6px;letter-spacing:-0.3px">Find the trades everyone else misses</div>
-            <p style="color:var(--mt);margin-bottom:16px;font-size:13px;line-height:1.6">Enter any headline. I'll skip the obvious reaction and find second and third-order plays &mdash; the hidden winners and losers the market hasn't priced in yet.</p>
-            <div class="intro-features">
-                <div class="intro-feat">
-                    <div class="intro-feat-icon">&#128269;</div>
-                    <div><div class="intro-feat-title">Hidden Connections</div>
-                    <div class="intro-feat-desc">2nd and 3rd-order supply chain effects most investors miss</div></div>
-                </div>
-                <div class="intro-feat">
-                    <div class="intro-feat-icon">&#128200;</div>
-                    <div><div class="intro-feat-title">Price Projections</div>
-                    <div class="intro-feat-desc">30-day volatility cone with conviction-weighted targets</div></div>
-                </div>
-                <div class="intro-feat">
-                    <div class="intro-feat-icon">&#127919;</div>
-                    <div><div class="intro-feat-title">Actionable Signals</div>
-                    <div class="intro-feat-desc">BUY / SHORT / WATCH with entry logic and risk/reward</div></div>
-                </div>
-            </div>
-            <div class="scorecard" id="scorecard" style="display:none"></div>
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);margin-bottom:6px" id="sugg-label">Try a scenario</div>
-            <div class="sugg" id="sugg"></div>
+    <div style="margin-bottom:16px">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+            <span style="font-size:15px;font-weight:800;letter-spacing:-0.2px">Catalyst Analysis Terminal</span>
+            <span style="font-size:10px;color:var(--mt);font-family:'JetBrains Mono',monospace">v2.0</span>
         </div>
+        <p style="color:var(--mt);font-size:12px;margin-bottom:16px">Enter a headline, earnings event, or macro scenario. Returns 2nd/3rd-order supply chain plays with live prices, historical precedent, and conviction-weighted projections.</p>
+        <div style="display:flex;gap:1px;background:var(--bd);border-radius:var(--r1);overflow:hidden;margin-bottom:16px">
+            <div style="background:var(--s2);padding:10px 14px;flex:1;text-align:center">
+                <div style="font-size:10px;color:var(--mt);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Method</div>
+                <div style="font-size:12px;font-weight:700;margin-top:2px">Value Chain Mapping</div>
+            </div>
+            <div style="background:var(--s2);padding:10px 14px;flex:1;text-align:center">
+                <div style="font-size:10px;color:var(--mt);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Data</div>
+                <div style="font-size:12px;font-weight:700;margin-top:2px">Yahoo / SEC / WSJ</div>
+            </div>
+            <div style="background:var(--s2);padding:10px 14px;flex:1;text-align:center">
+                <div style="font-size:10px;color:var(--mt);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Projection</div>
+                <div style="font-size:12px;font-weight:700;margin-top:2px">30d GBM Cone</div>
+            </div>
+        </div>
+        <div class="scorecard" id="scorecard" style="display:none"></div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--mt);margin-bottom:6px" id="sugg-label">Try a scenario</div>
+        <div class="sugg" id="sugg"></div>
     </div>
     <div id="msgs"></div>
 </div>
@@ -635,7 +615,7 @@
 <div class="input-bar">
     <div class="input-w">
         <input id="inp" placeholder="e.g. NVIDIA beats earnings by 20%, TSMC builds US fabs, Fed cuts rates..." onkeydown="if(event.key==='Enter'){event.preventDefault();send()}">
-        <button class="send" id="sendBtn" onclick="send()">Analyze &#8594;</button>
+        <button class="send" id="sendBtn" onclick="send()">RUN</button>
     </div>
 </div>
 </div>
@@ -709,17 +689,17 @@
     <div style="background:var(--s1);border-radius:var(--r2);padding:20px;margin-top:20px;border:1px solid var(--bd)">
         <div style="font-weight:700;margin-bottom:10px">Data Sources</div>
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:12px;color:var(--mt)">
-            <div>&#128240; <strong>WSJ RSS</strong> &mdash; Live headlines</div>
-            <div>&#128200; <strong>Yahoo Finance</strong> &mdash; Prices &amp; metrics</div>
-            <div>&#127963;&#65039; <strong>SEC EDGAR</strong> &mdash; 8-K filings</div>
-            <div>&#128225; <strong>NewsAPI</strong> &mdash; News aggregation</div>
-            <div>&#129302; <strong>Claude AI</strong> &mdash; Investment analysis</div>
-            <div>&#128200; <strong>GBM Projection</strong> &mdash; Volatility cones</div>
+            <div><strong>WSJ RSS</strong> &mdash; Live headlines</div>
+            <div><strong>Yahoo Finance</strong> &mdash; Prices &amp; metrics</div>
+            <div><strong>SEC EDGAR</strong> &mdash; 8-K filings</div>
+            <div><strong>NewsAPI</strong> &mdash; News aggregation</div>
+            <div><strong>Claude API</strong> &mdash; Investment analysis</div>
+            <div><strong>GBM Projection</strong> &mdash; Volatility cones</div>
         </div>
     </div>
 
     <div style="margin-top:20px;text-align:center">
-        <button class="send" style="padding:14px 32px" onclick="showView('analyze')">Start Analyzing &#8594;</button>
+        <button class="send" style="padding:12px 28px" onclick="showView('analyze')">START</button>
     </div>
 </div>
 </div>
@@ -978,12 +958,12 @@ function addUser(t) {
 // ── Streaming Progress ──
 function addStreamProgress() {
     document.getElementById('msgs').insertAdjacentHTML('beforeend',
-        `<div class="msg msg-a" id="streamMsg"><div class="lbl">ThetaFlow</div><div class="bub">
+        `<div class="msg" id="streamMsg">
             <div class="stream-progress" id="streamProgress">
                 <div class="stream-bar-track"><div class="stream-bar-fill" id="streamBar" style="width:5%"></div></div>
                 <div class="stream-msg"><div class="stream-dot"></div> <span id="streamText">Identifying investment themes...</span></div>
             </div>
-        </div></div>`);
+        </div>`);
     scrollEnd();
 }
 function updateStreamProgress(pct, message) {
@@ -1060,7 +1040,7 @@ function handleAllocInput(el) {
 // ── Render Analysis ──
 function renderAnalysis(d) {
     lastAnalysisData = d;
-    let h = '<div class="msg msg-a"><div class="lbl">ThetaFlow</div><div class="bub">';
+    let h = '<div class="msg">';
 
     // Verdict
     const topDir = d.top_picks?.[0]?.direction || 'bullish';
@@ -1068,25 +1048,25 @@ function renderAnalysis(d) {
     const isBull = topDir === 'bullish';
     const verdictColor = isBull ? 'var(--gn)' : 'var(--rd)';
     const verdictWord = isBull ? 'BULLISH' : 'BEARISH';
-    const verdictIcon = isBull ? '\u{1F4C8}' : '\u{1F4C9}';
-    const convLabel = topConv > .7 ? 'Strong' : topConv > .4 ? 'Moderate' : 'Low';
+    const convLabel = topConv > .7 ? 'HIGH' : topConv > .4 ? 'MED' : 'LOW';
 
     h += `<div class="verdict-wrap ${isBull ? '' : 'bear'}"><div class="verdict-inner">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:10px">
-                <span style="font-size:28px">${verdictIcon}</span>
-                <div>
-                    <div style="font-size:22px;font-weight:900;color:${verdictColor};letter-spacing:1px">${verdictWord}</div>
-                    <div style="font-size:11px;color:var(--mt);font-weight:500">${convLabel} conviction &middot; ${d.ai_time_horizon || 'short-term'}</div>
-                </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div>
+                <div style="font-size:9px;color:var(--mt);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:2px">Directional Bias</div>
+                <div style="font-size:20px;font-weight:900;color:${verdictColor};letter-spacing:1.5px;font-family:'JetBrains Mono',monospace">${verdictWord}</div>
             </div>
             <div style="text-align:right">
-                <div style="font-size:30px;font-weight:900;color:${verdictColor};font-family:'JetBrains Mono',monospace">${(topConv * 100).toFixed(0)}%</div>
-                <div style="font-size:9px;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Confidence</div>
+                <div style="font-size:9px;color:var(--mt);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:2px">Conviction</div>
+                <div style="font-size:22px;font-weight:900;color:${verdictColor};font-family:'JetBrains Mono',monospace">${(topConv * 100).toFixed(0)}%</div>
+            </div>
+            <div style="text-align:right">
+                <div style="font-size:9px;color:var(--mt);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:2px">Horizon</div>
+                <div style="font-size:12px;font-weight:700;color:var(--tx2)">${d.ai_time_horizon || 'short-term'}</div>
             </div>
         </div>
-        <div style="height:4px;background:var(--bg2);border-radius:2px;overflow:hidden">
-            <div style="height:100%;width:${topConv * 100}%;background:${verdictColor};border-radius:2px;transition:width .5s ease"></div>
+        <div style="height:3px;background:var(--bg2);border-radius:1px;overflow:hidden">
+            <div style="height:100%;width:${topConv * 100}%;background:${verdictColor};border-radius:1px"></div>
         </div>
     </div></div>`;
 
@@ -1104,25 +1084,24 @@ function renderAnalysis(d) {
     // Obvious Play
     if (d.obvious_play) {
         const op = d.obvious_play;
-        const opIcon = op.direction === 'bullish' ? '\u{1F4C8}' : '\u{1F4C9}';
         h += `<div class="obvious">
-            <div class="obvious-tag">Already Priced In</div>
-            <div style="font-size:12px;color:var(--mt);flex:1"><strong style="color:var(--ac2)">${op.ticker}</strong> ${opIcon} ${op.summary}</div>
+            <div class="obvious-tag">PRICED IN</div>
+            <div style="font-size:12px;color:var(--mt);flex:1"><strong style="color:var(--ac)">${op.ticker}</strong> &mdash; ${op.summary}</div>
         </div>`;
     }
 
     // Summary
     if (d.summary) {
         h += `<div style="margin-bottom:16px">
-            <div class="sec-hdr" style="color:var(--cy)">&#128161; Key Insight</div>
-            <p style="font-size:14px;line-height:1.7;margin:0">${d.summary}</p>
+            <div class="sec-hdr" style="color:var(--ac)">THESIS</div>
+            <p style="font-size:13px;line-height:1.7;margin:0">${d.summary}</p>
         </div>`;
     }
 
     // Historical Precedents
     if (d.historical_precedents?.length) {
         h += `<div style="margin-bottom:14px">
-            <div class="sec-hdr" style="color:var(--cy)">&#128220; What Happened Last Time</div>`;
+            <div class="sec-hdr" style="color:var(--cy)">PRECEDENT</div>`;
         d.historical_precedents.forEach(p => {
             h += `<div class="precedent-box">
                 <div class="prec-event">${p.event} <span class="prec-date">&middot; ${p.date || ''}</span></div>
@@ -1138,14 +1117,14 @@ function renderAnalysis(d) {
     // Cross Catalysts
     if (d.active_catalysts?.length) {
         h += `<div class="catalysts-box">
-            <div class="sec-hdr" style="color:var(--pu);margin-bottom:6px">&#9889; Other Forces in Play</div>
+            <div class="sec-hdr" style="color:var(--pu);margin-bottom:6px">CROSS-CATALYSTS</div>
             ${d.active_catalysts.map(c => `<div class="catalyst-item">${c}</div>`).join('')}
         </div>`;
     }
 
     // Trades header
     if (d.top_picks?.length) {
-        h += `<div class="sec-hdr" style="color:var(--cy);margin-bottom:10px">&#127919; Recommended Trades <span style="font-weight:400;color:var(--mt)">&middot; Non-obvious plays</span></div>`;
+        h += `<div class="sec-hdr" style="color:var(--ac);margin-bottom:10px">TRADES <span style="font-weight:400;color:var(--mt)">&middot; non-obvious plays</span></div>`;
     }
 
     // Ticker cards
@@ -1211,8 +1190,8 @@ function renderAnalysis(d) {
             }
 
             if (t.investment_analysis) h += `<div class="analysis">${t.investment_analysis}</div>`;
-            if (t.earnings_impact) h += `<div class="tk-earnings">&#128176; ${t.earnings_impact}</div>`;
-            if (t.precedent_move) h += `<div class="tk-precedent">&#128220; Precedent: ${t.precedent_move}</div>`;
+            if (t.earnings_impact) h += `<div class="tk-earnings">${t.earnings_impact}</div>`;
+            if (t.precedent_move) h += `<div class="tk-precedent">Precedent: ${t.precedent_move}</div>`;
 
             h += `<div class="tk-ctx">
                 <span class="ctx-badge ${hzCls}">${(t.time_horizon || 'short_term').replace('_', ' ')}</span>
@@ -1226,26 +1205,26 @@ function renderAnalysis(d) {
     if (d.risk_factors?.length || d.contrarian_view) {
         h += `<div style="margin-top:16px;background:var(--s1);border-radius:var(--r2);padding:14px;border:1px solid var(--bd);border-left:3px solid var(--yl)">`;
         if (d.risk_factors?.length) {
-            h += '<div style="font-size:11px;font-weight:800;color:var(--yl);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">&#9888;&#65039; Risk Factors</div>';
+            h += '<div style="font-size:10px;font-weight:800;color:var(--yl);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">RISK FACTORS</div>';
             h += '<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--tx2)">';
             d.risk_factors.forEach(r => h += `<li style="margin-bottom:4px">${r}</li>`);
             h += '</ul>';
         }
         if (d.contrarian_view) {
-            h += `<div style="margin-top:10px;font-size:13px;color:var(--tx2)"><strong style="color:var(--yl)">&#128260; Contrarian View:</strong> ${d.contrarian_view}</div>`;
+            h += `<div style="margin-top:10px;font-size:13px;color:var(--tx2)"><strong style="color:var(--yl)">CONTRARIAN:</strong> ${d.contrarian_view}</div>`;
         }
         h += '</div>';
     }
 
     // AI badge
     if (d.ai_powered) {
-        h += '<div style="margin-top:12px;display:flex;align-items:center;gap:6px;font-size:10px;color:var(--ac2);font-weight:600"><span style="width:6px;height:6px;background:var(--ac);border-radius:50%;display:inline-block;box-shadow:0 0 8px var(--ac)"></span> Analysis powered by Claude AI</div>';
+        h += '<div style="margin-top:12px;font-size:9px;color:var(--mt);text-transform:uppercase;letter-spacing:1px;font-weight:600">AI-generated analysis &middot; not financial advice</div>';
     }
 
     // Portfolio Allocation section
     if (d.top_picks?.length && d.top_picks.some(t => t.current_price > 0)) {
         h += `<div class="alloc-section">
-            <div class="sec-hdr" style="color:var(--ac2);margin-bottom:10px">&#128188; My Portfolio Allocation</div>
+            <div class="sec-hdr" style="color:var(--ac);margin-bottom:10px">PORTFOLIO SIZING</div>
             <div class="alloc-input-row">
                 <div class="alloc-input-wrap">
                     <span class="dollar-sign">$</span>
@@ -1266,7 +1245,7 @@ function renderAnalysis(d) {
             byChain[r.chain_name][r.layer].push(r);
         });
         for (const [cn, layers] of Object.entries(byChain)) {
-            h += `<div class="pipeline"><div class="pipe-title">&#9939;&#65039; ${cn}</div>`;
+            h += `<div class="pipeline"><div class="pipe-title">${cn}</div>`;
             for (const [ln, tks] of Object.entries(layers)) {
                 h += `<div class="pipe-layer"><div class="pipe-dot"></div><div class="pipe-content">
                     <div class="pipe-layer-name">${ln}</div>
