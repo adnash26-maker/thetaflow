@@ -327,7 +327,7 @@ def analyze_stream():
 
             with analyst.client.messages.stream(
                 model="claude-sonnet-4-20250514",
-                max_tokens=4000,
+                max_tokens=6000,
                 messages=[{"role": "user", "content": prompt}]
             ) as stream:
                 token_count = 0
@@ -356,8 +356,15 @@ def analyze_stream():
             # Parse the complete response
             ai_result = analyst._parse_dynamic_result(full_text)
             if not ai_result or not ai_result.get("top_picks"):
-                yield sse("error", {"message": "Could not generate analysis. Try a more specific headline."})
-                return
+                logger.error(f"Stream parse failed. Text length: {len(full_text)}, starts with: {full_text[:200]}")
+                # Fallback: try the non-streaming path
+                try:
+                    ai_result = analyst.generate_dynamic_chains(headline)
+                except Exception:
+                    ai_result = None
+                if not ai_result or not ai_result.get("top_picks"):
+                    yield sse("error", {"message": "Could not generate analysis. Try a more specific headline."})
+                    return
 
             # Send raw AI result immediately (before financial enrichment)
             yield sse("ai_result", {
