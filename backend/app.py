@@ -934,6 +934,379 @@ def export_csv_portfolio():
     return Response(output.getvalue(), mimetype='text/csv',
                     headers={"Content-Disposition": "attachment;filename=thetaflow_portfolio.csv"})
 
+@app.route("/api/export-xlsx", methods=["POST"])
+def export_xlsx():
+    """Export analysis as Excel workbook with valuation model buildup."""
+    import math
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
+    except ImportError:
+        return jsonify({"error": "openpyxl not installed"}), 500
+
+    data = request.json or {}
+    if not data.get("top_picks"):
+        return jsonify({"error": "No analysis data provided"}), 400
+
+    wb = Workbook()
+
+    # ── Style constants ──
+    hdr_font = Font(name='Calibri', bold=True, size=10, color='FFFFFF')
+    hdr_fill = PatternFill(start_color='1B2A4A', end_color='1B2A4A', fill_type='solid')
+    sec_font = Font(name='Calibri', bold=True, size=11, color='1B2A4A')
+    mono_font = Font(name='Consolas', size=10)
+    pct_fmt = '0.0%'
+    usd_fmt = '$#,##0.00'
+    usd_whole = '$#,##0'
+    thin_border = Border(
+        bottom=Side(style='thin', color='D0D5DD'),
+    )
+
+    def style_header_row(ws, row, col_count):
+        for c in range(1, col_count + 1):
+            cell = ws.cell(row=row, column=c)
+            cell.font = hdr_font
+            cell.fill = hdr_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+
+    def auto_width(ws):
+        for col in ws.columns:
+            max_len = 0
+            col_letter = col[0].column_letter
+            for cell in col:
+                if cell.value:
+                    max_len = max(max_len, len(str(cell.value)))
+            ws.column_dimensions[col_letter].width = min(max_len + 3, 45)
+
+    # ════════════════════════════════════════
+    # SHEET 1: Summary
+    # ════════════════════════════════════════
+    ws = wb.active
+    ws.title = "Summary"
+    ws.sheet_properties.tabColor = "22D3EE"
+
+    ws.cell(row=1, column=1, value="THETAFLOW ANALYSIS").font = Font(name='Calibri', bold=True, size=14, color='1B2A4A')
+    ws.cell(row=2, column=1, value=f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+    ws.cell(row=2, column=1).font = Font(name='Calibri', size=9, color='6B7D96')
+
+    ws.cell(row=4, column=1, value="Headline").font = sec_font
+    ws.cell(row=4, column=2, value=data.get("headline", ""))
+    ws.cell(row=5, column=1, value="Direction").font = sec_font
+    top_dir = data.get("top_picks", [{}])[0].get("direction", "bullish")
+    ws.cell(row=5, column=2, value=top_dir.upper())
+    ws.cell(row=5, column=2).font = Font(name='Calibri', bold=True, size=10,
+                                          color='10B981' if top_dir == 'bullish' else 'EF4444')
+    ws.cell(row=6, column=1, value="Conviction").font = sec_font
+    top_conv = data.get("top_picks", [{}])[0].get("conviction", 0)
+    ws.cell(row=6, column=2, value=top_conv)
+    ws.cell(row=6, column=2).number_format = pct_fmt
+    ws.cell(row=7, column=1, value="Time Horizon").font = sec_font
+    ws.cell(row=7, column=2, value=data.get("ai_time_horizon", data.get("time_horizon", "")))
+
+    # Themes
+    chains = data.get("chains", [])
+    if chains:
+        ws.cell(row=9, column=1, value="Investment Themes").font = sec_font
+        for i, c in enumerate(chains):
+            ws.cell(row=10 + i, column=1, value=c.get("chain_name", ""))
+            ws.cell(row=10 + i, column=2, value=c.get("relevance_score", 0))
+            ws.cell(row=10 + i, column=2).number_format = pct_fmt
+
+    # Thesis
+    r = 10 + len(chains) + 1
+    ws.cell(row=r, column=1, value="Thesis").font = sec_font
+    ws.cell(row=r + 1, column=1, value=data.get("summary", ""))
+    ws.merge_cells(start_row=r + 1, start_column=1, end_row=r + 1, end_column=4)
+
+    # Obvious play
+    op = data.get("obvious_play")
+    if op:
+        r += 3
+        ws.cell(row=r, column=1, value="Obvious Play (Priced In)").font = sec_font
+        ws.cell(row=r + 1, column=1, value=op.get("ticker", ""))
+        ws.cell(row=r + 1, column=2, value=op.get("summary", ""))
+
+    auto_width(ws)
+
+    # ════════════════════════════════════════
+    # SHEET 2: Trades
+    # ════════════════════════════════════════
+    ws2 = wb.create_sheet("Trades")
+    ws2.sheet_properties.tabColor = "34D399"
+    headers = ["Ticker", "Company", "Action", "Direction", "Conviction",
+               "Order", "Chain", "Layer", "Exposure", "Impact Score",
+               "Risk/Reward", "Time Horizon",
+               "Earnings Impact", "Historical Precedent", "Thesis"]
+    for c, h in enumerate(headers, 1):
+        ws2.cell(row=1, column=c, value=h)
+    style_header_row(ws2, 1, len(headers))
+
+    all_picks = data.get("recommendations", data.get("top_picks", []))
+    for i, t in enumerate(all_picks, 2):
+        ws2.cell(row=i, column=1, value=t.get("ticker", "")).font = Font(name='Consolas', bold=True, size=10)
+        ws2.cell(row=i, column=2, value=t.get("company", ""))
+        ws2.cell(row=i, column=3, value=t.get("action", ""))
+        ws2.cell(row=i, column=4, value=t.get("direction", ""))
+        ws2.cell(row=i, column=5, value=t.get("conviction", 0))
+        ws2.cell(row=i, column=5).number_format = pct_fmt
+        ws2.cell(row=i, column=6, value=t.get("order", 1))
+        ws2.cell(row=i, column=7, value=t.get("chain_name", ""))
+        ws2.cell(row=i, column=8, value=t.get("layer", ""))
+        ws2.cell(row=i, column=9, value=t.get("exposure", ""))
+        ws2.cell(row=i, column=10, value=t.get("impact_score", 0))
+        ws2.cell(row=i, column=11, value=t.get("risk_reward", ""))
+        ws2.cell(row=i, column=12, value=(t.get("time_horizon", "") or "").replace("_", " "))
+        ws2.cell(row=i, column=13, value=t.get("earnings_impact", ""))
+        ws2.cell(row=i, column=14, value=t.get("precedent_move", ""))
+        ws2.cell(row=i, column=15, value=t.get("thesis", t.get("investment_analysis", "")))
+        for c in range(1, len(headers) + 1):
+            ws2.cell(row=i, column=c).border = thin_border
+
+    auto_width(ws2)
+
+    # ════════════════════════════════════════
+    # SHEET 3: Valuation & Pro Forma
+    # ════════════════════════════════════════
+    ws3 = wb.create_sheet("Valuation")
+    ws3.sheet_properties.tabColor = "FBBF24"
+    val_headers = ["Ticker", "Company", "Current Price", "Market Cap",
+                   "52w High", "52w Low", "Dist from High",
+                   "Direction", "Conviction", "Impact Score",
+                   "30d Projected Move", "Target Price", "Upside/Downside",
+                   "Conviction-Wtd Return", "Earnings Impact", "Risk/Reward"]
+    for c, h in enumerate(val_headers, 1):
+        ws3.cell(row=1, column=c, value=h)
+    style_header_row(ws3, 1, len(val_headers))
+
+    top_picks = data.get("top_picks", [])
+    for i, t in enumerate(top_picks, 2):
+        fin = t.get("financials", {})
+        price = t.get("current_price", 0) or 0
+        conv = t.get("conviction", 0.5)
+        direction = t.get("direction", "bullish")
+        proj_sign = 1 if direction == "bullish" else -1
+        proj_30d = (math.exp(proj_sign * conv * 0.003 * 22) - 1)
+        target = price * (1 + proj_30d) if price else 0
+
+        ws3.cell(row=i, column=1, value=t.get("ticker", "")).font = Font(name='Consolas', bold=True, size=10)
+        ws3.cell(row=i, column=2, value=t.get("company", ""))
+
+        ws3.cell(row=i, column=3, value=price)
+        ws3.cell(row=i, column=3).number_format = usd_fmt
+
+        # Market cap — try to parse from string like "$1.2B"
+        mc_str = fin.get("market_cap", "") or ""
+        mc_val = None
+        if mc_str:
+            try:
+                mc_clean = mc_str.replace("$", "").replace(",", "").strip()
+                if mc_clean.endswith("T"):
+                    mc_val = float(mc_clean[:-1]) * 1e12
+                elif mc_clean.endswith("B"):
+                    mc_val = float(mc_clean[:-1]) * 1e9
+                elif mc_clean.endswith("M"):
+                    mc_val = float(mc_clean[:-1]) * 1e6
+                else:
+                    mc_val = float(mc_clean)
+            except (ValueError, IndexError):
+                pass
+        ws3.cell(row=i, column=4, value=mc_val if mc_val else mc_str)
+        if mc_val:
+            ws3.cell(row=i, column=4).number_format = usd_whole
+
+        ws3.cell(row=i, column=5, value=fin.get("fifty_two_high"))
+        ws3.cell(row=i, column=5).number_format = usd_fmt
+        ws3.cell(row=i, column=6, value=fin.get("fifty_two_low"))
+        ws3.cell(row=i, column=6).number_format = usd_fmt
+
+        dist = fin.get("distance_from_high_pct")
+        ws3.cell(row=i, column=7, value=dist / 100 if dist else None)
+        ws3.cell(row=i, column=7).number_format = pct_fmt
+
+        ws3.cell(row=i, column=8, value=direction)
+        ws3.cell(row=i, column=9, value=conv)
+        ws3.cell(row=i, column=9).number_format = pct_fmt
+        ws3.cell(row=i, column=10, value=t.get("impact_score", 0))
+
+        ws3.cell(row=i, column=11, value=proj_30d)
+        ws3.cell(row=i, column=11).number_format = pct_fmt
+        ws3.cell(row=i, column=11).font = Font(name='Consolas', size=10,
+            color='10B981' if proj_30d >= 0 else 'EF4444')
+
+        ws3.cell(row=i, column=12, value=target)
+        ws3.cell(row=i, column=12).number_format = usd_fmt
+
+        upside = proj_30d  # same as projected move
+        ws3.cell(row=i, column=13, value=upside)
+        ws3.cell(row=i, column=13).number_format = pct_fmt
+        ws3.cell(row=i, column=13).font = Font(name='Consolas', size=10,
+            color='10B981' if upside >= 0 else 'EF4444')
+
+        # Conviction-weighted return
+        cw_ret = conv * upside
+        ws3.cell(row=i, column=14, value=cw_ret)
+        ws3.cell(row=i, column=14).number_format = pct_fmt
+
+        ws3.cell(row=i, column=15, value=t.get("earnings_impact", ""))
+        ws3.cell(row=i, column=16, value=t.get("risk_reward", ""))
+
+        for c in range(1, len(val_headers) + 1):
+            ws3.cell(row=i, column=c).border = thin_border
+
+    # Portfolio-level summary row
+    sum_row = len(top_picks) + 3
+    ws3.cell(row=sum_row, column=1, value="PORTFOLIO SUMMARY").font = sec_font
+    if top_picks:
+        avg_conv = sum(t.get("conviction", 0) for t in top_picks) / len(top_picks)
+        avg_upside = sum(
+            (math.exp((1 if t.get("direction") == "bullish" else -1) * t.get("conviction", 0.5) * 0.003 * 22) - 1)
+            for t in top_picks
+        ) / len(top_picks)
+        ws3.cell(row=sum_row + 1, column=1, value="Avg Conviction")
+        ws3.cell(row=sum_row + 1, column=2, value=avg_conv)
+        ws3.cell(row=sum_row + 1, column=2).number_format = pct_fmt
+        ws3.cell(row=sum_row + 2, column=1, value="Avg Projected Move")
+        ws3.cell(row=sum_row + 2, column=2, value=avg_upside)
+        ws3.cell(row=sum_row + 2, column=2).number_format = pct_fmt
+        ws3.cell(row=sum_row + 3, column=1, value="Number of Picks")
+        ws3.cell(row=sum_row + 3, column=2, value=len(top_picks))
+
+    auto_width(ws3)
+
+    # ════════════════════════════════════════
+    # SHEET 4: Portfolio Sizing
+    # ════════════════════════════════════════
+    portfolio_size = data.get("portfolio_size")
+    if portfolio_size and top_picks:
+        ws4 = wb.create_sheet("Portfolio Sizing")
+        ws4.sheet_properties.tabColor = "818CF8"
+
+        ws4.cell(row=1, column=1, value="PORTFOLIO SIZING").font = Font(name='Calibri', bold=True, size=12, color='1B2A4A')
+        ws4.cell(row=2, column=1, value="Portfolio Value")
+        ws4.cell(row=2, column=2, value=portfolio_size)
+        ws4.cell(row=2, column=2).number_format = usd_whole
+
+        ps_headers = ["Ticker", "Company", "Action", "Conviction", "Weight",
+                      "Dollar Allocation", "Shares", "Price", "Projected Return", "Dollar P&L"]
+        for c, h in enumerate(ps_headers, 1):
+            ws4.cell(row=4, column=c, value=h)
+        style_header_row(ws4, 4, len(ps_headers))
+
+        valid_picks = [t for t in top_picks if t.get("current_price", 0) > 0]
+        total_conv = sum(t.get("conviction", 0.5) for t in valid_picks) or 1
+
+        for i, t in enumerate(valid_picks, 5):
+            conv = t.get("conviction", 0.5)
+            weight = conv / total_conv
+            dollars = portfolio_size * weight
+            price = t.get("current_price", 0)
+            shares = int(dollars / price) if price else 0
+            proj_sign = 1 if t.get("direction") == "bullish" else -1
+            proj_ret = math.exp(proj_sign * conv * 0.003 * 22) - 1
+            dollar_pnl = dollars * proj_ret
+
+            ws4.cell(row=i, column=1, value=t.get("ticker", "")).font = Font(name='Consolas', bold=True, size=10)
+            ws4.cell(row=i, column=2, value=t.get("company", ""))
+            ws4.cell(row=i, column=3, value=t.get("action", ""))
+            ws4.cell(row=i, column=4, value=conv)
+            ws4.cell(row=i, column=4).number_format = pct_fmt
+            ws4.cell(row=i, column=5, value=weight)
+            ws4.cell(row=i, column=5).number_format = pct_fmt
+            ws4.cell(row=i, column=6, value=dollars)
+            ws4.cell(row=i, column=6).number_format = usd_whole
+            ws4.cell(row=i, column=7, value=shares)
+            ws4.cell(row=i, column=8, value=price)
+            ws4.cell(row=i, column=8).number_format = usd_fmt
+            ws4.cell(row=i, column=9, value=proj_ret)
+            ws4.cell(row=i, column=9).number_format = pct_fmt
+            ws4.cell(row=i, column=10, value=dollar_pnl)
+            ws4.cell(row=i, column=10).number_format = usd_whole
+            ws4.cell(row=i, column=10).font = Font(name='Consolas', size=10,
+                color='10B981' if dollar_pnl >= 0 else 'EF4444')
+            for c in range(1, len(ps_headers) + 1):
+                ws4.cell(row=i, column=c).border = thin_border
+
+        # Totals row
+        tr = 5 + len(valid_picks)
+        ws4.cell(row=tr, column=1, value="TOTAL").font = sec_font
+        ws4.cell(row=tr, column=6, value=portfolio_size)
+        ws4.cell(row=tr, column=6).number_format = usd_whole
+        ws4.cell(row=tr, column=6).font = sec_font
+        total_pnl = sum(
+            (portfolio_size * (t.get("conviction", 0.5) / total_conv)) *
+            (math.exp((1 if t.get("direction") == "bullish" else -1) * t.get("conviction", 0.5) * 0.003 * 22) - 1)
+            for t in valid_picks
+        )
+        ws4.cell(row=tr, column=10, value=total_pnl)
+        ws4.cell(row=tr, column=10).number_format = usd_whole
+        ws4.cell(row=tr, column=10).font = Font(name='Consolas', bold=True, size=10,
+            color='10B981' if total_pnl >= 0 else 'EF4444')
+
+        auto_width(ws4)
+
+    # ════════════════════════════════════════
+    # SHEET 5: Risk Assessment
+    # ════════════════════════════════════════
+    ws5 = wb.create_sheet("Risk")
+    ws5.sheet_properties.tabColor = "FBBF24"
+
+    ws5.cell(row=1, column=1, value="RISK ASSESSMENT").font = Font(name='Calibri', bold=True, size=12, color='1B2A4A')
+
+    r = 3
+    risk_factors = data.get("risk_factors", [])
+    if risk_factors:
+        ws5.cell(row=r, column=1, value="Risk Factors").font = sec_font
+        r += 1
+        for rf in risk_factors:
+            ws5.cell(row=r, column=1, value=rf)
+            r += 1
+        r += 1
+
+    contrarian = data.get("contrarian_view", "")
+    if contrarian:
+        ws5.cell(row=r, column=1, value="Contrarian View").font = sec_font
+        r += 1
+        ws5.cell(row=r, column=1, value=contrarian)
+        ws5.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
+        r += 2
+
+    catalysts = data.get("active_catalysts", [])
+    if catalysts:
+        ws5.cell(row=r, column=1, value="Active Cross-Catalysts").font = sec_font
+        r += 1
+        for cat in catalysts:
+            ws5.cell(row=r, column=1, value=cat)
+            r += 1
+        r += 1
+
+    precedents = data.get("historical_precedents", [])
+    if precedents:
+        ws5.cell(row=r, column=1, value="Historical Precedents").font = sec_font
+        r += 1
+        for p in precedents:
+            ws5.cell(row=r, column=1, value=f"{p.get('event', '')} ({p.get('date', '')})")
+            r += 1
+            for o in p.get("outcomes", []):
+                ws5.cell(row=r, column=1, value=f"  {o.get('ticker', '')}: {o.get('move', '')} over {o.get('period', '')}")
+                r += 1
+
+    auto_width(ws5)
+
+    # ── Write to bytes and return ──
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    headline_slug = re.sub(r'[^a-zA-Z0-9]', '_', data.get("headline", "analysis")[:30]).strip('_')
+    filename = f"thetaflow_{headline_slug}_{datetime.utcnow().strftime('%Y%m%d')}.xlsx"
+
+    return Response(
+        output.getvalue(),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={"Content-Disposition": f"attachment;filename={filename}"}
+    )
+
+
 # ── Auth Endpoints ──
 
 @app.route("/api/auth/register", methods=["POST"])

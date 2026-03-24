@@ -846,7 +846,7 @@ async function loadTrending() {
                         <div class="trend-meta">${_ago(r.created_at)} &middot; ${r.chain_name || ''}</div>
                     </div>
                     <span class="trend-pnl" style="color:${pnlClr}">${r.pnl_pct >= 0 ? '+' : ''}${r.pnl_pct}%</span>
-                    <span style="font-size:10px">${r.correct ? '\u2705' : '\u274C'}</span>
+                    <span style="font-size:9px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${r.correct ? 'var(--gn)' : 'var(--rd)'}">${r.correct ? 'W' : 'L'}</span>
                 </div>`;
             });
             h += '</div>';
@@ -934,7 +934,7 @@ document.getElementById('sugg').innerHTML = CATS.map(s =>
                     <div class="sc-bar" style="width:${pnlWidth}%;background:${pnlClr}"></div>
                 </div>
                 <span class="sc-pnl" style="color:${pnlClr}">${r.pnl_pct >= 0 ? '+' : ''}${r.pnl_pct}%</span>
-                <span style="font-size:10px">${r.correct ? '\u2705' : '\u274C'}</span>
+                <span style="font-size:9px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${r.correct ? 'var(--gn)' : 'var(--rd)'}">${r.correct ? 'W' : 'L'}</span>
             </div>`;
         });
         h += '</div>';
@@ -1035,6 +1035,35 @@ function handleAllocInput(el) {
     if (!val || val <= 0) return;
     const container = document.getElementById('allocResult');
     if (container) container.innerHTML = renderAllocationTable(val);
+}
+
+// ── Excel Export ──
+async function exportXlsx() {
+    if (!lastAnalysisData) return;
+    const payload = { ...lastAnalysisData };
+    // Include portfolio size if user entered one
+    const allocInput = document.getElementById('allocInput');
+    if (allocInput && allocInput.value) {
+        const val = parseFloat(allocInput.value.replace(/[^0-9.]/g, ''));
+        if (val > 0) payload.portfolio_size = val;
+    }
+    try {
+        const r = await fetch(`${API}/export-xlsx`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!r.ok) { alert('Export failed'); return }
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = r.headers.get('Content-Disposition')?.split('filename=')[1] || 'thetaflow_analysis.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    } catch (e) { console.error('Export failed:', e) }
 }
 
 // ── Render Analysis ──
@@ -1264,8 +1293,14 @@ function renderAnalysis(d) {
         }
     }
 
+    // Export button
+    h += `<div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+        <button onclick="exportXlsx()" style="padding:8px 16px;border-radius:var(--r1);border:1px solid var(--bd);background:var(--s2);color:var(--tx2);font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--ac)'" onmouseout="this.style.borderColor='var(--bd)'">EXPORT .XLSX</button>
+        <span style="font-size:9px;color:var(--mt)">Valuation model with pro forma analysis</span>
+    </div>`;
+
     h += '<div class="disc">Not financial advice. Trend-based analysis for informational purposes only.</div>';
-    h += '</div></div>';
+    h += '</div>';
     document.getElementById('msgs').insertAdjacentHTML('beforeend', h);
     scrollEnd();
 
