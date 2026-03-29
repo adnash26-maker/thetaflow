@@ -463,7 +463,7 @@ def analyze_stream():
 
         except Exception as e:
             logger.error(f"Stream analysis failed: {e}")
-            yield sse("error", {"message": f"Analysis failed: {str(e)[:100]}"})
+            yield sse("error", {"message": f"Analysis failed: {str(e)[:300]}"})
 
     return Response(
         generate(),
