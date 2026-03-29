@@ -201,44 +201,105 @@ def get_chain_detail(chain_id):
 
 @app.route("/api/top-headlines", methods=["GET"])
 def get_top_headlines():
-    """Get one top headline per major category from WSJ RSS feeds."""
+    """Get live headlines from multiple RSS sources, one per category."""
     import xml.etree.ElementTree as ET
-    from email.utils import parsedate_to_datetime
+    from concurrent.futures import ThreadPoolExecutor
 
-    feeds = {
-        "Technology": {"url": "https://feeds.a.dj.com/rss/RSSWSJD.xml", "color": "#8b5cf6"},
-        "Markets": {"url": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml", "color": "#6366f1"},
-        "Business": {"url": "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml", "color": "#10b981"},
-        "Economy": {"url": "https://feeds.a.dj.com/rss/RSSEconomy.xml", "color": "#f59e0b"},
+    # Multiple feeds per category for redundancy. First working feed wins.
+    feed_groups = {
+        "Technology": {
+            "color": "#22d3ee",
+            "feeds": [
+                "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en",
+            ],
+        },
+        "Markets": {
+            "color": "#34d399",
+            "feeds": [
+                "https://finance.yahoo.com/news/rssindex",
+                "https://feeds.marketwatch.com/marketwatch/topstories/",
+            ],
+        },
+        "Business": {
+            "color": "#818cf8",
+            "feeds": [
+                "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en",
+                "https://feeds.marketwatch.com/marketwatch/topstories/",
+            ],
+        },
+        "Economy": {
+            "color": "#fbbf24",
+            "feeds": [
+                "https://news.google.com/rss/topics/CAAqIggKIhxDQkFTRHdvSkwyMHZNR2RtZUhBU0FtVnVLQUFQAQ?hl=en-US&gl=US&ceid=US:en",
+                "https://finance.yahoo.com/news/rssindex",
+            ],
+        },
     }
 
-    headlines = []
-    for category, info in feeds.items():
+    def fetch_feed(url):
+        """Fetch and parse a single RSS feed, return list of items."""
         try:
-            # Cache-busting: timestamp param + no-cache headers to bypass CDN/proxy caches
-            cache_bust_url = f"{info['url']}?_t={int(time.time())}"
-            resp = requests.get(cache_bust_url, headers={
-                "User-Agent": "ThetaFlow/1.0",
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Pragma": "no-cache",
-                "If-None-Match": "",  # Force fresh response
-            }, timeout=6)
+            resp = requests.get(url, headers={
+                "User-Agent": "Mozilla/5.0 (compatible; ThetaFlow/2.0)",
+                "Cache-Control": "no-cache",
+            }, timeout=8)
             if resp.status_code != 200:
-                continue
+                return []
             root = ET.fromstring(resp.content)
-            item = root.find(".//item")
-            if item is not None:
+            items = root.findall(".//item")
+            results = []
+            for item in items[:10]:
                 title = (item.findtext("title") or "").strip()
+                link = (item.findtext("link") or "").strip()
                 if title and len(title) > 15:
+                    results.append({"title": title[:120], "url": link})
+            return results
+        except Exception:
+            return []
+
+    # Fetch all unique feed URLs in parallel
+    all_urls = set()
+    for group in feed_groups.values():
+        all_urls.update(group["feeds"])
+
+    feed_cache = {}
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {url: executor.submit(fetch_feed, url) for url in all_urls}
+        for url, future in futures.items():
+            try:
+                feed_cache[url] = future.result(timeout=10)
+            except Exception:
+                feed_cache[url] = []
+
+    # Pick one headline per category, avoid duplicates
+    headlines = []
+    seen_titles = set()
+    # Track which item index to use per feed to avoid reusing the same headline
+    feed_idx = {url: 0 for url in all_urls}
+
+    for category, info in feed_groups.items():
+        found = False
+        for feed_url in info["feeds"]:
+            items = feed_cache.get(feed_url, [])
+            idx = feed_idx.get(feed_url, 0)
+            while idx < len(items):
+                item = items[idx]
+                idx += 1
+                title_key = item["title"][:50].lower()
+                if title_key not in seen_titles:
+                    seen_titles.add(title_key)
                     headlines.append({
                         "category": category,
-                        "title": title[:120],
-                        "url": item.findtext("link", ""),
+                        "title": item["title"],
+                        "url": item["url"],
                         "color": info["color"],
-                        "source": "WSJ",
+                        "source": "Live",
                     })
-        except Exception:
-            pass
+                    feed_idx[feed_url] = idx
+                    found = True
+                    break
+            if found:
+                break
 
     response = jsonify({"success": True, "headlines": headlines})
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
